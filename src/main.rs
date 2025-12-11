@@ -11,7 +11,7 @@ use crossterm::{
 fn draw_game(stdout: &mut Stdout) -> Result<(), Box<dyn Error>> {
     let wsize = terminal::window_size().expect("I mean bruh, we need the window size eh?");
 
-    if wsize.rows < 30 || wsize.columns < 30 {
+    if wsize.rows < 50 || wsize.columns < 50 {
         stdout.execute(Clear(ClearType::All))?;
 
         stdout.execute(cursor::MoveTo(0, 0))?;
@@ -21,13 +21,23 @@ fn draw_game(stdout: &mut Stdout) -> Result<(), Box<dyn Error>> {
 
     stdout.execute(Clear(ClearType::All))?;
 
-    stdout.execute(cursor::MoveTo(0, 0))?;
-    let rows = wsize.rows;
-    let columns = wsize.columns;
-    write!(stdout, "{rows}")?;
+    for i in 0..40 {
+        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20 + i, wsize.rows / 2 - 20);
+        stdout.execute(cursor_to_top_left)?;
+        write!(stdout, "#")?;
 
-    stdout.execute(cursor::MoveTo(0, 1))?;
-    write!(stdout, "{columns}")?;
+        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 + 20, wsize.rows / 2 - 20 + i);
+        stdout.execute(cursor_to_top_left)?;
+        write!(stdout, "#")?;
+
+        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20, wsize.rows / 2 - 20 + i);
+        stdout.execute(cursor_to_top_left)?;
+        write!(stdout, "#")?;
+
+        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20 + i, wsize.rows / 2 + 20);
+        stdout.execute(cursor_to_top_left)?;
+        write!(stdout, "#")?;
+    }
 
     stdout.flush()?;
 
