@@ -33,7 +33,7 @@ fn draw_game(stdout: &mut Stdout) -> Result<(), Box<dyn Error>> {
 
     thread::sleep(Duration::from_millis(150));
 
-    Ok(());
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
