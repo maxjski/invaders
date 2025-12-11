@@ -9,6 +9,9 @@ use crossterm::{
     terminal::{self, Clear, ClearType},
 };
 
+const SCREEN_WIDTH: u16 = 120;
+const SCREEN_HEIGHT: u16 = 40;
+
 struct GameState {
     wsize_updated: bool,
     wsize: terminal::WindowSize,
@@ -16,7 +19,7 @@ struct GameState {
 }
 
 fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn Error>> {
-    if wsize.rows < 50 || wsize.columns < 50 {
+    if wsize.rows < SCREEN_HEIGHT + 5 || wsize.columns < SCREEN_WIDTH + 5 {
         stdout.execute(Clear(ClearType::All))?;
 
         stdout.execute(cursor::MoveTo(0, 0))?;
@@ -26,23 +29,38 @@ fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn
 
     stdout.execute(Clear(ClearType::All))?;
 
-    for i in 0..40 {
-        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20 + i, wsize.rows / 2 - 20);
+    for i in 0..SCREEN_HEIGHT {
+        let cursor_to_top_left = cursor::MoveTo(
+            wsize.columns / 2 + SCREEN_WIDTH / 2,
+            wsize.rows / 2 - SCREEN_HEIGHT / 2 + i,
+        );
         stdout.execute(cursor_to_top_left)?;
         write!(stdout, "#")?;
 
-        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 + 20, wsize.rows / 2 - 20 + i);
-        stdout.execute(cursor_to_top_left)?;
-        write!(stdout, "#")?;
-
-        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20, wsize.rows / 2 - 20 + i);
-        stdout.execute(cursor_to_top_left)?;
-        write!(stdout, "#")?;
-
-        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20 + i, wsize.rows / 2 + 20);
+        let cursor_to_top_left = cursor::MoveTo(
+            wsize.columns / 2 - SCREEN_WIDTH / 2,
+            wsize.rows / 2 - SCREEN_HEIGHT / 2 + i,
+        );
         stdout.execute(cursor_to_top_left)?;
         write!(stdout, "#")?;
     }
+
+    for i in 0..SCREEN_WIDTH {
+        let cursor_to_top_left = cursor::MoveTo(
+            wsize.columns / 2 - SCREEN_WIDTH / 2 + i,
+            wsize.rows / 2 - SCREEN_HEIGHT / 2,
+        );
+        stdout.execute(cursor_to_top_left)?;
+        write!(stdout, "#")?;
+
+        let cursor_to_top_left = cursor::MoveTo(
+            wsize.columns / 2 - SCREEN_WIDTH / 2 + i,
+            wsize.rows / 2 + SCREEN_HEIGHT / 2,
+        );
+        stdout.execute(cursor_to_top_left)?;
+        write!(stdout, "#")?;
+    }
+
     Ok(())
 }
 
@@ -53,38 +71,38 @@ fn draw_game(game_state: &mut GameState) -> Result<(), Box<dyn Error>> {
         render_borders(&game_state.wsize, &mut game_state.stdout)?;
     }
 
-    let stdout = &mut game_state.stdout;
-    let wsize = terminal::window_size().expect("I mean bruh, we need the window size eh?");
-
-    if wsize.rows < 50 || wsize.columns < 50 {
-        stdout.execute(Clear(ClearType::All))?;
-
-        stdout.execute(cursor::MoveTo(0, 0))?;
-        write!(stdout, "Your terminal is too little dude")?;
-        return Result::Ok(());
-    }
-
-    stdout.execute(Clear(ClearType::All))?;
-
-    for i in 0..40 {
-        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20 + i, wsize.rows / 2 - 20);
-        stdout.execute(cursor_to_top_left)?;
-        write!(stdout, "#")?;
-
-        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 + 20, wsize.rows / 2 - 20 + i);
-        stdout.execute(cursor_to_top_left)?;
-        write!(stdout, "#")?;
-
-        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20, wsize.rows / 2 - 20 + i);
-        stdout.execute(cursor_to_top_left)?;
-        write!(stdout, "#")?;
-
-        let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20 + i, wsize.rows / 2 + 20);
-        stdout.execute(cursor_to_top_left)?;
-        write!(stdout, "#")?;
-    }
-
-    stdout.flush()?;
+    // let stdout = &mut game_state.stdout;
+    // let wsize = terminal::window_size().expect("I mean bruh, we need the window size eh?");
+    //
+    // if wsize.rows < 50 || wsize.columns < 50 {
+    //     stdout.execute(Clear(ClearType::All))?;
+    //
+    //     stdout.execute(cursor::MoveTo(0, 0))?;
+    //     write!(stdout, "Your terminal is too little dude")?;
+    //     return Result::Ok(());
+    // }
+    //
+    // stdout.execute(Clear(ClearType::All))?;
+    //
+    // for i in 0..40 {
+    //     let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20 + i, wsize.rows / 2 - 20);
+    //     stdout.execute(cursor_to_top_left)?;
+    //     write!(stdout, "#")?;
+    //
+    //     let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 + 20, wsize.rows / 2 - 20 + i);
+    //     stdout.execute(cursor_to_top_left)?;
+    //     write!(stdout, "#")?;
+    //
+    //     let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20, wsize.rows / 2 - 20 + i);
+    //     stdout.execute(cursor_to_top_left)?;
+    //     write!(stdout, "#")?;
+    //
+    //     let cursor_to_top_left = cursor::MoveTo(wsize.columns / 2 - 20 + i, wsize.rows / 2 + 20);
+    //     stdout.execute(cursor_to_top_left)?;
+    //     write!(stdout, "#")?;
+    // }
+    //
+    // stdout.flush()?;
 
     thread::sleep(Duration::from_millis(150));
 
