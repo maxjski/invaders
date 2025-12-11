@@ -1,11 +1,14 @@
 use std::error::Error;
 use std::io::{Stdout, Write, stdout};
+use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
 use crossterm::terminal::WindowSize;
 use crossterm::{
-    ExecutableCommand, cursor, queue,
+    ExecutableCommand, cursor,
+    event::{self, Event, KeyCode, KeyEvent},
+    queue,
     terminal::{self, Clear, ClearType},
 };
 
@@ -84,7 +87,27 @@ impl GameState {
     }
 }
 
+enum GameEvent {
+    Input(KeyEvent),
+    Resize(u16, u16),
+    Tick,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+    let (tx, rx) = mpsc::channel();
+
+    let tx_tick = tx.clone();
+    thread::spawn(move || {
+        loop {
+            if tx_tick.send(GameEvent::Tick).is_err() {
+                break;
+            }
+            thread::sleep(Duration::from_millis(16));
+        }
+    });
+
+    thread::spawn(move || {});
+
     let mut stdout = stdout();
 
     // Enter raw mode and hide cursor
