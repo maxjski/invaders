@@ -15,7 +15,13 @@ fn main() {
             .read_line(&mut guess)
             .expect("Something went wrong");
 
-        let guess: u32 = guess.trim().parse().expect("Error parsing");
+        let guess: u32 = match guess.trim().parse() {
+            Ok(num) => num,
+            Err(_) => {
+                println!("You can only enter numbers!");
+                continue;
+            }
+        };
 
         match guess.cmp(&secret_number) {
             Ordering::Less => println!("Too little!"),
