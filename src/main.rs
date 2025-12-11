@@ -71,7 +71,7 @@ fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn
 }
 
 impl GameState {
-    fn draw_game(&mut self) -> Result<(), Box<dyn Error>> {
+    fn render(&mut self) -> Result<(), Box<dyn Error>> {
         if self.wsize_updated {
             self.wsize_updated = false;
 
@@ -98,7 +98,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         stdout,
     };
 
-    game_state.draw_game()?;
+    game_state.render()?;
 
     // Show cursor again and disable raw mode before exiting
     game_state.stdout.execute(cursor::Show)?;
