@@ -121,6 +121,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         stdout,
     };
 
+    let running = true;
+    while running {
+        match rx.recv() {}
+    }
+
     game_state.render()?;
 
     // Show cursor again and disable raw mode before exiting
