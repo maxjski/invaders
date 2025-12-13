@@ -80,9 +80,6 @@ impl GameState {
 
             render_borders(&self.wsize, &mut self.stdout)?;
         }
-
-        thread::sleep(Duration::from_millis(150));
-
         Ok(())
     }
 }
