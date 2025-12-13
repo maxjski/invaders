@@ -28,7 +28,7 @@ fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn
     let half_h = SCREEN_HEIGHT / 2;
 
     let left = center_x.saturating_sub(half_w);
-    let right = center_x + half_w;
+    let right = center_x + half_w - 1;
     let top = center_y.saturating_sub(half_h);
     let bottom = center_y + half_h;
 
@@ -54,6 +54,9 @@ fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn
 
     queue!(stdout, cursor::MoveTo(left, bottom - 4))?;
     write!(stdout, "{}", horizontal_wall)?;
+
+    queue!(stdout, cursor::MoveTo(left + 2, bottom - 2))?;
+    write!(stdout, "q - exit")?;
 
     for i in 0..SCREEN_HEIGHT {
         let y = top + i;
