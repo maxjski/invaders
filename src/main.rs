@@ -7,7 +7,7 @@ use std::time::Duration;
 use crossterm::terminal::WindowSize;
 use crossterm::{
     ExecutableCommand, cursor,
-    event::{self, Event, KeyCode, KeyEvent},
+    event::{self, Event, KeyCode, KeyEvent, read},
     queue,
     terminal::{self, Clear, ClearType},
 };
@@ -89,8 +89,9 @@ impl GameState {
 
 enum GameEvent {
     Input(KeyEvent),
-    Resize(u16, u16),
+    ResizeGame,
     Tick,
+    Quit,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -106,7 +107,30 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    thread::spawn(move || {});
+    thread::spawn(move || {
+        loop {
+            match read() {
+                Ok(event) => match event {
+                    Event::Key(key_event) => {
+                        if key_event.code == KeyCode::Char('q') {
+                            match tx.send(GameEvent::Quit) {
+                                Ok(_) => continue,
+                                Err(_) => break,
+                            }
+                        }
+                    }
+                    Event::Resize(_, _) => match tx.send(GameEvent::ResizeGame) {
+                        Ok(_) => continue,
+                        Err(_) => break,
+                    },
+                    _ => continue,
+                },
+                Err(_) => {
+                    continue;
+                }
+            }
+        }
+    });
 
     let mut stdout = stdout();
 
@@ -121,9 +145,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         stdout,
     };
 
-    let running = true;
-    while running {
-        match rx.recv() {}
+    loop {
+        match rx.recv() {
+            Ok(game_event) => match game_event {
+                GameEvent::Quit => {
+                    break;
+                }
+                GameEvent::ResizeGame => {
+                    game_state.wsize_updated = true;
+                    game_state.wsize = terminal::window_size()?;
+                    match game_state.render() {
+                        Ok(_) => continue,
+                        Err(_) => {
+                            break;
+                        }
+                    }
+                }
+                _ => continue,
+            },
+            Err(_) => continue,
+        }
     }
 
     game_state.render()?;
