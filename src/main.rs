@@ -2,7 +2,7 @@ use std::error::Error;
 use std::io::{Stdout, Write, stdout};
 use std::sync::mpsc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crossterm::terminal::WindowSize;
 use crossterm::{
@@ -110,19 +110,52 @@ impl GameState {
 }
 
 enum GameEvent {
-    Input(KeyEvent),
     ResizeGame,
     Tick,
     Quit,
-    MovePlayer(i16),
+    MovePlayerLeft,
+    MovePlayerRight,
+    MovePlayerStop,
+}
+
+enum Direction {
+    Right,
+    Left,
+    None,
 }
 
 struct PlayerShip {
     hp: u32,
     position: u16,
+    speed: f32,
+    move_accumulator: f32,
+    direction: Direction,
 }
 
 impl PlayerShip {
+    fn update(&mut self, delta_time: Duration) -> bool {
+        match self.direction {
+            Direction::Right => {
+                self.move_accumulator += self.speed * delta_time.as_secs_f32();
+            }
+            Direction::Left => {
+                self.move_accumulator -= self.speed * delta_time.as_secs_f32();
+            }
+            _ => (),
+        }
+
+        if self.move_accumulator >= 1.0 || self.move_accumulator <= -1.0 {
+            let new_pos = self.position as f32 + self.move_accumulator;
+
+            if new_pos > 2.0 && new_pos < 114.0 {
+                let new_pos = new_pos as u16;
+                self.position = new_pos;
+                return true;
+            }
+        }
+        false
+    }
+
     fn render_player(
         &mut self,
         left_x: u16,
@@ -186,13 +219,21 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }
-                        } else if key_event.code == KeyCode::Char('a') {
-                            match tx.send(GameEvent::MovePlayer(-1)) {
+                        } else if key_event.code == KeyCode::Char('a') && key_event.is_press() {
+                            match tx.send(GameEvent::MovePlayerLeft) {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }
-                        } else if key_event.code == KeyCode::Char('d') {
-                            match tx.send(GameEvent::MovePlayer(1)) {
+                        } else if key_event.code == KeyCode::Char('d') && key_event.is_press() {
+                            match tx.send(GameEvent::MovePlayerRight) {
+                                Ok(_) => continue,
+                                Err(_) => break,
+                            }
+                        } else if (key_event.code == KeyCode::Char('a')
+                            || key_event.code == KeyCode::Char('d'))
+                            && key_event.is_release()
+                        {
+                            match tx.send(GameEvent::MovePlayerStop) {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }
@@ -220,6 +261,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let player = PlayerShip {
         hp: 100,
         position: 55,
+        speed: 1.0,
+        move_accumulator: 0.0,
+        direction: Direction::None,
     };
 
     // Each frame is a list of lines
@@ -239,6 +283,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Err(e);
     }
 
+    let mut last_frame_time = Instant::now();
+
     loop {
         match rx.recv() {
             Ok(game_event) => match game_event {
@@ -255,21 +301,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                         }
                     }
                 }
-                GameEvent::MovePlayer(movement) => {
-                    let new_pos = (game_state.player.position as i16 + movement);
+                GameEvent::MovePlayerLeft => {
+                    game_state.player.direction = Direction::Left;
+                }
+                GameEvent::MovePlayerRight => {
+                    game_state.player.direction = Direction::Right;
+                }
+                GameEvent::MovePlayerStop => {
+                    game_state.player.direction = Direction::None;
+                }
+                GameEvent::Tick => {
+                    let now = Instant::now();
+                    let dt = now.duration_since(last_frame_time);
+                    last_frame_time = now;
 
-                    if new_pos > 1 && new_pos < 120 {
-                        game_state.player.position = new_pos as u16;
-                        game_state.player_updated = true;
+                    game_state.player.update(dt);
+                    game_state.player_updated = true;
+
+                    match game_state.render() {
+                        Ok(_) => continue,
+                        Err(_) => {
+                            break;
+                        }
                     }
                 }
-                GameEvent::Tick => match game_state.render() {
-                    Ok(_) => continue,
-                    Err(_) => {
-                        break;
-                    }
-                },
-                _ => continue,
             },
             Err(_) => continue,
         }
