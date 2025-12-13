@@ -52,6 +52,9 @@ fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn
     queue!(stdout, cursor::MoveTo(left, bottom))?;
     write!(stdout, "{}", horizontal_wall)?;
 
+    queue!(stdout, cursor::MoveTo(left, bottom - 4))?;
+    write!(stdout, "{}", horizontal_wall)?;
+
     for i in 0..SCREEN_HEIGHT {
         let y = top + i;
 
