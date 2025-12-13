@@ -17,7 +17,7 @@ const SCREEN_HEIGHT: u16 = 40;
 
 struct GameState {
     wsize_updated: bool,
-    player_position_updated: bool,
+    player_updated: bool,
     wsize: terminal::WindowSize,
     stdout: Stdout,
     player: PlayerShip,
@@ -97,12 +97,13 @@ impl GameState {
             self.wsize_updated = false;
 
             render_borders(&self.wsize, &mut self.stdout)?;
+            self.player_updated = true;
         }
-        if self.player_position_updated {
-            self.player_position_updated = false;
+        if self.player_updated {
+            self.player_updated = false;
+            let (left, _, _, bottom) = get_game_bounds(&self.wsize);
 
-            self.player.render_player(left, bottom, stdout) // TODO: What is the best way to handle
-            // this?
+            self.player.render_player(left, bottom, &mut self.stdout)?;
         }
         Ok(())
     }
@@ -127,11 +128,13 @@ impl PlayerShip {
         bottom_y: u16,
         stdout: &mut Stdout,
     ) -> Result<(), Box<dyn Error>> {
-        queue!(stdout, cursor::MoveTo(left_x + 20, bottom_y + 2))?;
+        queue!(stdout, cursor::MoveTo(left_x + self.position, bottom_y - 7))?;
         write!(stdout, "⣆⡜⣛⢣⣠")?;
 
-        queue!(stdout, cursor::MoveTo(left_x + 20, bottom_y + 1))?;
+        queue!(stdout, cursor::MoveTo(left_x + self.position, bottom_y - 6))?;
         write!(stdout, "⣿⣿⣿⣿⣿")?;
+
+        stdout.flush()?;
 
         Ok(())
     }
@@ -181,9 +184,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     terminal::enable_raw_mode()?;
     queue!(stdout, cursor::Hide)?;
 
+    let player = PlayerShip {
+        hp: 100,
+        position: 55,
+    };
+
     // Each frame is a list of lines
     let mut game_state = GameState {
+        player_updated: true,
         wsize_updated: true,
+        player,
         wsize: terminal::window_size()?,
         stdout,
     };
