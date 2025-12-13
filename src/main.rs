@@ -114,6 +114,7 @@ enum GameEvent {
     ResizeGame,
     Tick,
     Quit,
+    MovePlayer(i16),
 }
 
 struct PlayerShip {
@@ -128,6 +129,28 @@ impl PlayerShip {
         bottom_y: u16,
         stdout: &mut Stdout,
     ) -> Result<(), Box<dyn Error>> {
+        queue!(
+            stdout,
+            cursor::MoveTo(left_x + self.position - 1, bottom_y - 7)
+        )?;
+        write!(stdout, " ")?;
+        queue!(
+            stdout,
+            cursor::MoveTo(left_x + self.position + 5, bottom_y - 7)
+        )?;
+        write!(stdout, " ")?;
+
+        queue!(
+            stdout,
+            cursor::MoveTo(left_x + self.position - 1, bottom_y - 6)
+        )?;
+        write!(stdout, " ")?;
+        queue!(
+            stdout,
+            cursor::MoveTo(left_x + self.position + 5, bottom_y - 6)
+        )?;
+        write!(stdout, " ")?;
+
         queue!(stdout, cursor::MoveTo(left_x + self.position, bottom_y - 7))?;
         write!(stdout, "⣆⡜⣛⢣⣠")?;
 
@@ -160,6 +183,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                     Event::Key(key_event) => {
                         if key_event.code == KeyCode::Char('q') {
                             match tx.send(GameEvent::Quit) {
+                                Ok(_) => continue,
+                                Err(_) => break,
+                            }
+                        } else if key_event.code == KeyCode::Char('a') {
+                            match tx.send(GameEvent::MovePlayer(-1)) {
+                                Ok(_) => continue,
+                                Err(_) => break,
+                            }
+                        } else if key_event.code == KeyCode::Char('d') {
+                            match tx.send(GameEvent::MovePlayer(1)) {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }
@@ -222,6 +255,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                         }
                     }
                 }
+                GameEvent::MovePlayer(movement) => {
+                    let new_pos = (game_state.player.position as i16 + movement);
+
+                    if new_pos > 1 && new_pos < 120 {
+                        game_state.player.position = new_pos as u16;
+                        game_state.player_updated = true;
+                    }
+                }
+                GameEvent::Tick => match game_state.render() {
+                    Ok(_) => continue,
+                    Err(_) => {
+                        break;
+                    }
+                },
                 _ => continue,
             },
             Err(_) => continue,
