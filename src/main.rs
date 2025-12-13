@@ -22,52 +22,48 @@ struct GameState {
 }
 
 fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn Error>> {
+    let center_x = wsize.columns / 2;
+    let center_y = wsize.rows / 2;
+    let half_w = SCREEN_WIDTH / 2;
+    let half_h = SCREEN_HEIGHT / 2;
+
+    let left = center_x.saturating_sub(half_w);
+    let right = center_x + half_w;
+    let top = center_y.saturating_sub(half_h);
+    let bottom = center_y + half_h;
+
     queue!(stdout, Clear(ClearType::All))?;
+
+    // Check if terminal is too small
     if wsize.rows < SCREEN_HEIGHT + 5 || wsize.columns < SCREEN_WIDTH + 5 {
         queue!(stdout, cursor::MoveTo(0, 0))?;
-        write!(stdout, "Your terminal is too little dude")?;
-        return Result::Ok(());
+        write!(stdout, "Terminal too small")?;
+        stdout.flush()?;
+        return Ok(());
     }
+
+    let horizontal_wall = "#".repeat(SCREEN_WIDTH as usize);
+
+    // Draw Top Wall
+    queue!(stdout, cursor::MoveTo(left, top))?;
+    write!(stdout, "{}", horizontal_wall)?;
+
+    // Draw Bottom Wall
+    queue!(stdout, cursor::MoveTo(left, bottom))?;
+    write!(stdout, "{}", horizontal_wall)?;
 
     for i in 0..SCREEN_HEIGHT {
-        let cursor_to_top_left = cursor::MoveTo(
-            wsize.columns / 2 + SCREEN_WIDTH / 2,
-            wsize.rows / 2 - SCREEN_HEIGHT / 2 + i,
-        );
-        queue!(stdout, cursor_to_top_left)?;
+        let y = top + i;
+
+        // Left wall
+        queue!(stdout, cursor::MoveTo(left, y))?;
         write!(stdout, "#")?;
 
-        let cursor_to_top_left = cursor::MoveTo(
-            wsize.columns / 2 - SCREEN_WIDTH / 2,
-            wsize.rows / 2 - SCREEN_HEIGHT / 2 + i,
-        );
-        queue!(stdout, cursor_to_top_left)?;
+        // Right wall
+        queue!(stdout, cursor::MoveTo(right, y))?;
         write!(stdout, "#")?;
     }
 
-    for i in 0..SCREEN_WIDTH {
-        let cursor_to_top_left = cursor::MoveTo(
-            wsize.columns / 2 - SCREEN_WIDTH / 2 + i,
-            wsize.rows / 2 - SCREEN_HEIGHT / 2,
-        );
-        queue!(stdout, cursor_to_top_left)?;
-        write!(stdout, "#")?;
-
-        let cursor_to_top_left = cursor::MoveTo(
-            wsize.columns / 2 - SCREEN_WIDTH / 2 + i,
-            wsize.rows / 2 + SCREEN_HEIGHT / 2,
-        );
-        queue!(stdout, cursor_to_top_left)?;
-        write!(stdout, "#")?;
-    }
-    queue!(
-        stdout,
-        cursor::MoveTo(
-            wsize.columns / 2 + SCREEN_WIDTH / 2,
-            wsize.rows / 2 + SCREEN_HEIGHT / 2,
-        )
-    )?;
-    write!(stdout, "#")?;
     stdout.flush()?;
 
     Ok(())
@@ -142,6 +138,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         stdout,
     };
 
+    if let Err(e) = game_state.render() {
+        // We drop errors to keep and return the game_state.render() error instead
+        let _ = game_state.stdout.execute(cursor::Show);
+        let _ = terminal::disable_raw_mode();
+
+        return Err(e);
+    }
+
     loop {
         match rx.recv() {
             Ok(game_event) => match game_event {
@@ -163,8 +167,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             Err(_) => continue,
         }
     }
-
-    game_state.render()?;
 
     // Show cursor again and disable raw mode before exiting
     game_state.stdout.execute(cursor::Show)?;
