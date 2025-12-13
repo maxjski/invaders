@@ -17,8 +17,24 @@ const SCREEN_HEIGHT: u16 = 40;
 
 struct GameState {
     wsize_updated: bool,
+    player_position_updated: bool,
     wsize: terminal::WindowSize,
     stdout: Stdout,
+    player: PlayerShip,
+}
+
+fn get_game_bounds(wsize: &WindowSize) -> (u16, u16, u16, u16) {
+    let center_x = wsize.columns / 2;
+    let center_y = wsize.rows / 2;
+    let half_w = SCREEN_WIDTH / 2;
+    let half_h = SCREEN_HEIGHT / 2;
+
+    let left = center_x.saturating_sub(half_w);
+    let right = center_x + half_w - 1; // -1 to fit inside width
+    let top = center_y.saturating_sub(half_h);
+    let bottom = center_y + half_h;
+
+    (left, right, top, bottom)
 }
 
 fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn Error>> {
@@ -82,6 +98,12 @@ impl GameState {
 
             render_borders(&self.wsize, &mut self.stdout)?;
         }
+        if self.player_position_updated {
+            self.player_position_updated = false;
+
+            self.player.render_player(left, bottom, stdout) // TODO: What is the best way to handle
+            // this?
+        }
         Ok(())
     }
 }
@@ -91,6 +113,28 @@ enum GameEvent {
     ResizeGame,
     Tick,
     Quit,
+}
+
+struct PlayerShip {
+    hp: u32,
+    position: u16,
+}
+
+impl PlayerShip {
+    fn render_player(
+        &mut self,
+        left_x: u16,
+        bottom_y: u16,
+        stdout: &mut Stdout,
+    ) -> Result<(), Box<dyn Error>> {
+        queue!(stdout, cursor::MoveTo(left_x + 20, bottom_y + 2))?;
+        write!(stdout, "⣆⡜⣛⢣⣠")?;
+
+        queue!(stdout, cursor::MoveTo(left_x + 20, bottom_y + 1))?;
+        write!(stdout, "⣿⣿⣿⣿⣿")?;
+
+        Ok(())
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
