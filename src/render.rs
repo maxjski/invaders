@@ -1,7 +1,86 @@
 use crate::state::GameState;
+use crossterm::terminal::WindowSize;
+use std::error::Error;
 use std::io::Stdout;
+
+use crossterm::{
+    ExecutableCommand, cursor,
+    event::{
+        Event, KeyCode, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
+        PushKeyboardEnhancementFlags, read,
+    },
+    queue,
+    terminal::{self, Clear, ClearType},
+};
+
+const SCREEN_WIDTH: u16 = 120;
+const SCREEN_HEIGHT: u16 = 40;
 
 pub struct Render {
     stdout: Stdout,
     game_state: GameState,
+}
+
+impl Render {
+    fn get_game_bounds(self) -> (u16, u16, u16, u16) {
+        let center_x = self.game_state.wsize.columns / 2;
+        let center_y = self.game_state.wsize.rows / 2;
+        let half_w = SCREEN_WIDTH / 2;
+        let half_h = SCREEN_HEIGHT / 2;
+
+        let left = center_x.saturating_sub(half_w);
+        let right = center_x + half_w - 1; // -1 to fit inside width
+        let top = center_y.saturating_sub(half_h);
+        let bottom = center_y + half_h;
+
+        (left, right, top, bottom)
+    }
+
+    fn render_borders(&mut self, wsize: &WindowSize) -> Result<(), Box<dyn Error>> {
+        let stdout = self.stdout;
+
+        let (left, right, top, bottom) = self.get_game_bounds();
+
+        queue!(stdout, Clear(ClearType::All))?;
+
+        // Check if terminal is too small
+        if wsize.rows < SCREEN_HEIGHT + 5 || wsize.columns < SCREEN_WIDTH + 5 {
+            queue!(stdout, cursor::MoveTo(0, 0))?;
+            write!(stdout, "Terminal too small")?;
+            stdout.flush()?;
+            return Ok(());
+        }
+
+        let horizontal_wall = "#".repeat(SCREEN_WIDTH as usize);
+
+        // Draw Top Wall
+        queue!(stdout, cursor::MoveTo(left, top))?;
+        write!(stdout, "{}", horizontal_wall)?;
+
+        // Draw Bottom Wall
+        queue!(stdout, cursor::MoveTo(left, bottom))?;
+        write!(stdout, "{}", horizontal_wall)?;
+
+        queue!(stdout, cursor::MoveTo(left, bottom - 4))?;
+        write!(stdout, "{}", horizontal_wall)?;
+
+        queue!(stdout, cursor::MoveTo(left + 2, bottom - 2))?;
+        write!(stdout, "q - exit")?;
+
+        for i in 0..SCREEN_HEIGHT {
+            let y = top + i;
+
+            // Left wall
+            queue!(stdout, cursor::MoveTo(left, y))?;
+            write!(stdout, "#")?;
+
+            // Right wall
+            queue!(stdout, cursor::MoveTo(right, y))?;
+            write!(stdout, "#")?;
+        }
+
+        stdout.flush()?;
+
+        Ok(())
+    }
 }
