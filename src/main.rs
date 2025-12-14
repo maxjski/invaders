@@ -3,12 +3,7 @@ use std::io::stdout;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-use crossterm::{
-    ExecutableCommand, cursor,
-    event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
-    queue,
-    terminal::{self, Clear, ClearType},
-};
+use crossterm::{ExecutableCommand, cursor, event::PopKeyboardEnhancementFlags, terminal};
 
 use hecs::World;
 
@@ -28,16 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     spawn_coordination_threads(tx);
 
-    let mut stdout = stdout();
-
-    // Enter raw mode, ask terminal to report key releases (if supported), and hide cursor
-    terminal::enable_raw_mode()?;
-    let kb_flags = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
-        | KeyboardEnhancementFlags::REPORT_EVENT_TYPES;
-    let kb_enhanced = stdout
-        .execute(PushKeyboardEnhancementFlags(kb_flags))
-        .is_ok();
-    queue!(stdout, cursor::Hide)?;
+    let stdout = stdout();
 
     // World setup
     let world = World::new();
@@ -66,6 +52,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         wsize: terminal::window_size()?,
         wsize_updated: true,
     };
+
+    let kb_enhanced = renderer.terminal_raw_mode()?;
 
     if let Err(e) = renderer.render(&mut game_state.world) {
         // We drop errors to keep and return the game_state.render() error instead
@@ -117,11 +105,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             movement_system(dt.max(fixed_dt).min(max_dt), &mut game_state.world);
             renderer.render(&mut game_state.world)?;
-            // renderer
-            //     .game_state
-            //     .player
-            //     .update(dt.max(fixed_dt).min(max_dt));
-            // renderer.game_state.player_updated = true;
 
             match renderer.render(&mut game_state.world) {
                 Ok(_) => continue,
@@ -133,12 +116,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Disable keyboard enhancement (if enabled), show cursor again, and disable raw mode before exiting
-    if kb_enhanced {
-        let _ = renderer.stdout.execute(PopKeyboardEnhancementFlags);
-    }
-    renderer.stdout.execute(Clear(ClearType::All))?;
-    renderer.stdout.execute(cursor::Show)?;
-    terminal::disable_raw_mode()?;
+    renderer.terminal_disable_raw(kb_enhanced)?;
 
     Ok(())
 }

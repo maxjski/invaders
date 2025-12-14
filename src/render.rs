@@ -5,8 +5,10 @@ use hecs::World;
 
 use crossterm::terminal::WindowSize;
 use crossterm::{
-    cursor, queue,
-    terminal::{Clear, ClearType},
+    ExecutableCommand, cursor,
+    event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
+    queue,
+    terminal::{self, Clear, ClearType},
 };
 
 use crate::{Position, PrevPosition, Renderable};
@@ -38,6 +40,29 @@ impl Render {
 
         self.stdout.flush()?;
 
+        Ok(())
+    }
+
+    pub fn terminal_raw_mode(&mut self) -> Result<bool, Box<dyn Error>> {
+        terminal::enable_raw_mode()?;
+        let kb_flags = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+            | KeyboardEnhancementFlags::REPORT_EVENT_TYPES;
+        let kb_enhanced = self
+            .stdout
+            .execute(PushKeyboardEnhancementFlags(kb_flags))
+            .is_ok();
+        queue!(self.stdout, cursor::Hide)?;
+
+        Ok(kb_enhanced)
+    }
+
+    pub fn terminal_disable_raw(&mut self, kb_enhanced: bool) -> Result<(), Box<dyn Error>> {
+        if kb_enhanced {
+            let _ = self.stdout.execute(PopKeyboardEnhancementFlags);
+        }
+        self.stdout.execute(Clear(ClearType::All))?;
+        self.stdout.execute(cursor::Show)?;
+        terminal::disable_raw_mode()?;
         Ok(())
     }
 
