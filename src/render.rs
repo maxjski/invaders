@@ -1,36 +1,80 @@
-use crate::state::GameState;
-use crossterm::terminal::WindowSize;
 use std::error::Error;
 use std::io::{Stdout, Write};
 
+use hecs::World;
+
+use crossterm::terminal::WindowSize;
 use crossterm::{
     cursor, queue,
     terminal::{Clear, ClearType},
 };
+
+use crate::{Position, PrevPosition, Renderable};
+
 const SCREEN_WIDTH: u16 = 120;
 const SCREEN_HEIGHT: u16 = 40;
 
 pub struct Render {
     pub wsize_updated: bool,
     pub stdout: Stdout,
-    pub game_state: GameState,
     pub wsize: WindowSize,
 }
 
 impl Render {
-    pub fn render(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn render(&mut self, world: &mut World) -> Result<(), Box<dyn Error>> {
+        let (left, _, _, bottom) = self.get_game_bounds();
+
         if self.wsize_updated {
             self.wsize_updated = false;
 
             self.render_borders()?;
-            self.game_state.player_updated = true;
         }
-        if self.game_state.player_updated {
-            self.game_state.player_updated = false;
-            let (left, _, _, bottom) = self.get_game_bounds();
 
-            self.render_player(left, bottom)?;
+        for (_id, (pos, prev_pos, renderable)) in
+            world.query_mut::<(&Position, &PrevPosition, &Renderable)>()
+        {
+            self.draw_entity(left, bottom, pos, prev_pos, renderable)?;
         }
+
+        self.stdout.flush()?;
+
+        Ok(())
+    }
+
+    /// It queues actions without flushing stdout
+    ///
+    /// Remember to flush stdout after calling
+    fn draw_entity(
+        &mut self,
+        left: u16,
+        bottom: u16,
+        pos: &Position,
+        prev_pos: &PrevPosition,
+        renderable: &Renderable,
+    ) -> Result<(), Box<dyn Error>> {
+        // Erase previous sprite
+        let erasor = " ".repeat(renderable.width as usize);
+        queue!(
+            self.stdout,
+            cursor::MoveTo(left + prev_pos.x, bottom - prev_pos.y)
+        )?;
+        write!(self.stdout, "{}", erasor)?;
+        queue!(
+            self.stdout,
+            cursor::MoveTo(left + prev_pos.x, bottom - prev_pos.y + 1)
+        )?;
+        write!(self.stdout, "{}", erasor)?;
+
+        // Draw new sprite
+        queue!(self.stdout, cursor::MoveTo(left + pos.x, bottom - pos.y))?;
+        write!(self.stdout, "{}", renderable.sprite_top)?;
+
+        queue!(
+            self.stdout,
+            cursor::MoveTo(left + pos.x, bottom - pos.y + 1)
+        )?;
+        write!(self.stdout, "{}", renderable.sprite_bottom)?;
+
         Ok(())
     }
 
@@ -90,58 +134,6 @@ impl Render {
             queue!(stdout, cursor::MoveTo(right, y))?;
             write!(stdout, "#")?;
         }
-
-        stdout.flush()?;
-
-        Ok(())
-    }
-
-    fn render_player(&mut self, left_x: u16, bottom_y: u16) -> Result<(), Box<dyn Error>> {
-        // Clear previous sprite location to avoid smearing when moving fast
-        let stdout = &mut self.stdout;
-        let prev_x = left_x + self.game_state.player.prev_position;
-        let player_pos = self.game_state.player.position;
-        let clear_str = "       "; // width covering sprite plus padding
-        queue!(
-            stdout,
-            cursor::MoveTo(prev_x.saturating_sub(1), bottom_y - 7)
-        )?;
-        write!(stdout, "{}", clear_str)?;
-        queue!(
-            stdout,
-            cursor::MoveTo(prev_x.saturating_sub(1), bottom_y - 6)
-        )?;
-        write!(stdout, "{}", clear_str)?;
-
-        queue!(
-            stdout,
-            cursor::MoveTo(left_x + player_pos - 1, bottom_y - 7)
-        )?;
-        write!(stdout, " ")?;
-        queue!(
-            stdout,
-            cursor::MoveTo(left_x + player_pos + 5, bottom_y - 7)
-        )?;
-        write!(stdout, " ")?;
-
-        queue!(
-            stdout,
-            cursor::MoveTo(left_x + player_pos - 1, bottom_y - 6)
-        )?;
-        write!(stdout, " ")?;
-        queue!(
-            stdout,
-            cursor::MoveTo(left_x + player_pos + 5, bottom_y - 6)
-        )?;
-        write!(stdout, " ")?;
-
-        queue!(stdout, cursor::MoveTo(left_x + player_pos, bottom_y - 7))?;
-        write!(stdout, "⣆⡜⣛⢣⣠")?;
-
-        queue!(stdout, cursor::MoveTo(left_x + player_pos, bottom_y - 6))?;
-        write!(stdout, "⣿⣿⣿⣿⣿")?;
-
-        stdout.flush()?;
 
         Ok(())
     }

@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::io::stdout;
 use std::sync::mpsc;
+use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -14,10 +15,16 @@ use crossterm::{
     terminal::{self, Clear, ClearType},
 };
 
+use hecs::World;
+
+mod components;
 mod render;
 mod state;
+mod systems;
+use crate::components::*;
 use crate::render::*;
 use crate::state::*;
+use crate::systems::*;
 
 enum GameEvent {
     ResizeGame,
@@ -28,27 +35,32 @@ enum GameEvent {
     MovePlayerStop,
 }
 
-fn handle_event(event: GameEvent, renderer: &mut Render) -> bool {
-    let game_state = &mut renderer.game_state;
+fn handle_event(event: GameEvent, renderer: &mut Render, world: &mut World) -> bool {
     match event {
         GameEvent::ResizeGame => {
             renderer.wsize_updated = true;
             if let Ok(size) = terminal::window_size() {
                 renderer.wsize = size;
             }
-            let _ = renderer.render(); // render immediately to reflect new bounds
+            let _ = renderer.render(world); // render immediately to reflect new bounds
             false
         }
         GameEvent::MovePlayerLeft => {
-            game_state.player.direction = Direction::Left;
+            for (_, vel) in world.query_mut::<&mut Velocity>().with::<&Player>() {
+                vel.direction = Direction::Left;
+            }
             false
         }
         GameEvent::MovePlayerRight => {
-            game_state.player.direction = Direction::Right;
+            for (_, vel) in world.query_mut::<&mut Velocity>().with::<&Player>() {
+                vel.direction = Direction::Right;
+            }
             false
         }
         GameEvent::MovePlayerStop => {
-            game_state.player.direction = Direction::None;
+            for (_, vel) in world.query_mut::<&mut Velocity>().with::<&Player>() {
+                vel.direction = Direction::None;
+            }
             false
         }
         GameEvent::Tick => true,
@@ -56,9 +68,7 @@ fn handle_event(event: GameEvent, renderer: &mut Render) -> bool {
     }
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let (tx, rx) = mpsc::channel();
-
+fn spawn_coordination_threads(tx: Sender<GameEvent>) {
     let tx_tick = tx.clone();
     thread::spawn(move || {
         loop {
@@ -112,6 +122,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     });
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let (tx, rx) = mpsc::channel();
+
+    spawn_coordination_threads(tx);
 
     let mut stdout = stdout();
 
@@ -124,28 +140,35 @@ fn main() -> Result<(), Box<dyn Error>> {
         .is_ok();
     queue!(stdout, cursor::Hide)?;
 
-    let player = PlayerShip {
-        position: 55,
-        prev_position: 55,
-        speed: 30.0,
-        move_accumulator: 0.0,
-        direction: Direction::None,
-    };
+    // World setup
+    let world = World::new();
 
     // Each frame is a list of lines
-    let game_state = GameState {
-        player_updated: true,
-        player,
-    };
+    let mut game_state = GameState { world };
+
+    game_state.world.spawn((
+        Player,
+        Position { x: 55, y: 7 },
+        PrevPosition { x: 55, y: 7 },
+        Velocity {
+            speed: 100.0,
+            move_accumulator: 0.0,
+            direction: Direction::None,
+        },
+        Renderable {
+            sprite_top: "⣆⡜⣛⢣⣠",
+            sprite_bottom: "⣿⣿⣿⣿⣿",
+            width: 5,
+        },
+    ));
 
     let mut renderer = Render {
         stdout,
-        game_state,
         wsize: terminal::window_size()?,
         wsize_updated: true,
     };
 
-    if let Err(e) = renderer.render() {
+    if let Err(e) = renderer.render(&mut game_state.world) {
         // We drop errors to keep and return the game_state.render() error instead
         if kb_enhanced {
             let _ = renderer.stdout.execute(PopKeyboardEnhancementFlags);
@@ -167,7 +190,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(event) => match event {
                 GameEvent::Quit => break,
                 other => {
-                    tick_pending |= handle_event(other, &mut renderer);
+                    tick_pending |= handle_event(other, &mut renderer, &mut game_state.world);
                 }
             },
             Err(_) => continue,
@@ -181,7 +204,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     return Ok(());
                 }
                 other => {
-                    tick_pending |= handle_event(other, &mut renderer);
+                    tick_pending |= handle_event(other, &mut renderer, &mut game_state.world);
                 }
             }
         }
@@ -193,13 +216,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             // Clamp dt to reduce perceived speed changes when we fall behind
             dt = dt.min(max_dt);
 
-            renderer
-                .game_state
-                .player
-                .update(dt.max(fixed_dt).min(max_dt));
-            renderer.game_state.player_updated = true;
+            movement_system(dt.max(fixed_dt).min(max_dt), &mut game_state.world);
+            renderer.render(&mut game_state.world)?;
+            // renderer
+            //     .game_state
+            //     .player
+            //     .update(dt.max(fixed_dt).min(max_dt));
+            // renderer.game_state.player_updated = true;
 
-            match renderer.render() {
+            match renderer.render(&mut game_state.world) {
                 Ok(_) => continue,
                 Err(_) => {
                     break;
