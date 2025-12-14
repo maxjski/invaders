@@ -7,7 +7,10 @@ use std::time::{Duration, Instant};
 use crossterm::terminal::WindowSize;
 use crossterm::{
     ExecutableCommand, cursor,
-    event::{self, Event, KeyCode, KeyEvent, read},
+    event::{
+        Event, KeyCode, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
+        PushKeyboardEnhancementFlags, read,
+    },
     queue,
     terminal::{self, Clear, ClearType},
 };
@@ -118,6 +121,33 @@ enum GameEvent {
     MovePlayerStop,
 }
 
+fn handle_event(event: GameEvent, game_state: &mut GameState) -> bool {
+    match event {
+        GameEvent::ResizeGame => {
+            game_state.wsize_updated = true;
+            if let Ok(size) = terminal::window_size() {
+                game_state.wsize = size;
+            }
+            let _ = game_state.render(); // render immediately to reflect new bounds
+            false
+        }
+        GameEvent::MovePlayerLeft => {
+            game_state.player.direction = Direction::Left;
+            false
+        }
+        GameEvent::MovePlayerRight => {
+            game_state.player.direction = Direction::Right;
+            false
+        }
+        GameEvent::MovePlayerStop => {
+            game_state.player.direction = Direction::None;
+            false
+        }
+        GameEvent::Tick => true,
+        GameEvent::Quit => false,
+    }
+}
+
 enum Direction {
     Right,
     Left,
@@ -127,6 +157,7 @@ enum Direction {
 struct PlayerShip {
     hp: u32,
     position: u16,
+    prev_position: u16,
     speed: f32,
     move_accumulator: f32,
     direction: Direction,
@@ -141,17 +172,24 @@ impl PlayerShip {
             Direction::Left => {
                 self.move_accumulator -= self.speed * delta_time.as_secs_f32();
             }
-            _ => (),
+            Direction::None => {
+                self.move_accumulator = 0.0;
+            }
         }
 
         if self.move_accumulator >= 1.0 || self.move_accumulator <= -1.0 {
-            let new_pos = self.position as f32 + self.move_accumulator;
+            // Move in whole-cell steps, keep fractional remainder to avoid drift and asymmetry
+            let steps = self.move_accumulator.trunc();
+            let new_pos = self.position as i32 + steps as i32;
 
-            if new_pos > 2.0 && new_pos < 114.0 {
-                let new_pos = new_pos as u16;
-                self.position = new_pos;
+            if new_pos > 2 && new_pos < 114 {
+                let old_pos = self.position;
+                self.prev_position = old_pos;
+                self.position = new_pos as u16;
+                self.move_accumulator -= steps;
                 return true;
             }
+            self.move_accumulator -= steps;
         }
         false
     }
@@ -162,6 +200,20 @@ impl PlayerShip {
         bottom_y: u16,
         stdout: &mut Stdout,
     ) -> Result<(), Box<dyn Error>> {
+        // Clear previous sprite location to avoid smearing when moving fast
+        let prev_x = left_x + self.prev_position;
+        let clear_str = "       "; // width covering sprite plus padding
+        queue!(
+            stdout,
+            cursor::MoveTo(prev_x.saturating_sub(1), bottom_y - 7)
+        )?;
+        write!(stdout, "{}", clear_str)?;
+        queue!(
+            stdout,
+            cursor::MoveTo(prev_x.saturating_sub(1), bottom_y - 6)
+        )?;
+        write!(stdout, "{}", clear_str)?;
+
         queue!(
             stdout,
             cursor::MoveTo(left_x + self.position - 1, bottom_y - 7)
@@ -254,14 +306,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut stdout = stdout();
 
-    // Enter raw mode and hide cursor
+    // Enter raw mode, ask terminal to report key releases (if supported), and hide cursor
     terminal::enable_raw_mode()?;
+    let kb_flags = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+        | KeyboardEnhancementFlags::REPORT_EVENT_TYPES;
+    let kb_enhanced = stdout
+        .execute(PushKeyboardEnhancementFlags(kb_flags))
+        .is_ok();
     queue!(stdout, cursor::Hide)?;
 
     let player = PlayerShip {
         hp: 100,
         position: 55,
-        speed: 1.0,
+        prev_position: 55,
+        speed: 30.0,
         move_accumulator: 0.0,
         direction: Direction::None,
     };
@@ -277,6 +335,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Err(e) = game_state.render() {
         // We drop errors to keep and return the game_state.render() error instead
+        if kb_enhanced {
+            let _ = game_state.stdout.execute(PopKeyboardEnhancementFlags);
+        }
         let _ = game_state.stdout.execute(cursor::Show);
         let _ = terminal::disable_raw_mode();
 
@@ -284,53 +345,59 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let mut last_frame_time = Instant::now();
+    let max_dt = Duration::from_millis(20); // clamp to avoid speed spikes
+    let fixed_dt = Duration::from_millis(16);
 
     loop {
+        // Block until at least one event arrives
+        let mut tick_pending = false;
         match rx.recv() {
-            Ok(game_event) => match game_event {
-                GameEvent::Quit => {
-                    break;
-                }
-                GameEvent::ResizeGame => {
-                    game_state.wsize_updated = true;
-                    game_state.wsize = terminal::window_size()?;
-                    match game_state.render() {
-                        Ok(_) => continue,
-                        Err(_) => {
-                            break;
-                        }
-                    }
-                }
-                GameEvent::MovePlayerLeft => {
-                    game_state.player.direction = Direction::Left;
-                }
-                GameEvent::MovePlayerRight => {
-                    game_state.player.direction = Direction::Right;
-                }
-                GameEvent::MovePlayerStop => {
-                    game_state.player.direction = Direction::None;
-                }
-                GameEvent::Tick => {
-                    let now = Instant::now();
-                    let dt = now.duration_since(last_frame_time);
-                    last_frame_time = now;
-
-                    game_state.player.update(dt);
-                    game_state.player_updated = true;
-
-                    match game_state.render() {
-                        Ok(_) => continue,
-                        Err(_) => {
-                            break;
-                        }
-                    }
+            Ok(event) => match event {
+                GameEvent::Quit => break,
+                other => {
+                    tick_pending |= handle_event(other, &mut game_state);
                 }
             },
             Err(_) => continue,
+        };
+
+        // Drain any queued events; fold multiple ticks into a single step
+        while let Ok(event) = rx.try_recv() {
+            match event {
+                GameEvent::Quit => {
+                    // Exit immediately on quit
+                    return Ok(());
+                }
+                other => {
+                    tick_pending |= handle_event(other, &mut game_state);
+                }
+            }
+        }
+
+        if tick_pending {
+            let now = Instant::now();
+            let mut dt = now.duration_since(last_frame_time);
+            last_frame_time = now;
+            // Clamp dt to reduce perceived speed changes when we fall behind
+            dt = dt.min(max_dt);
+
+            game_state.player.update(dt.max(fixed_dt).min(max_dt));
+            game_state.player_updated = true;
+
+            match game_state.render() {
+                Ok(_) => continue,
+                Err(_) => {
+                    break;
+                }
+            }
         }
     }
 
-    // Show cursor again and disable raw mode before exiting
+    // Disable keyboard enhancement (if enabled), show cursor again, and disable raw mode before exiting
+    if kb_enhanced {
+        let _ = game_state.stdout.execute(PopKeyboardEnhancementFlags);
+    }
+    game_state.stdout.execute(Clear(ClearType::All))?;
     game_state.stdout.execute(cursor::Show)?;
     terminal::disable_raw_mode()?;
 
