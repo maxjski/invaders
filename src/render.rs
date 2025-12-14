@@ -16,12 +16,12 @@ const SCREEN_WIDTH: u16 = 120;
 const SCREEN_HEIGHT: u16 = 40;
 
 pub struct Render {
-    stdout: Stdout,
-    game_state: GameState,
+    pub stdout: Stdout,
+    pub game_state: GameState,
 }
 
 impl Render {
-    fn render(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn render(&mut self) -> Result<(), Box<dyn Error>> {
         if self.game_state.wsize_updated {
             self.game_state.wsize_updated = false;
 

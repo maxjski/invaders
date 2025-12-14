@@ -17,6 +17,7 @@ use crossterm::{
 
 mod render;
 mod state;
+use crate::render::*;
 use crate::state::*;
 
 const SCREEN_WIDTH: u16 = 120;
@@ -90,24 +91,6 @@ fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn
     Ok(())
 }
 
-impl GameState {
-    fn render(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.wsize_updated {
-            self.wsize_updated = false;
-
-            render_borders(&self.wsize, &mut self.stdout)?;
-            self.player_updated = true;
-        }
-        if self.player_updated {
-            self.player_updated = false;
-            let (left, _, _, bottom) = get_game_bounds(&self.wsize);
-
-            self.player.render_player(left, bottom, &mut self.stdout)?;
-        }
-        Ok(())
-    }
-}
-
 enum GameEvent {
     ResizeGame,
     Tick,
@@ -117,14 +100,15 @@ enum GameEvent {
     MovePlayerStop,
 }
 
-fn handle_event(event: GameEvent, game_state: &mut GameState) -> bool {
+fn handle_event(event: GameEvent, renderer: &mut Render) -> bool {
+    let game_state = &mut renderer.game_state;
     match event {
         GameEvent::ResizeGame => {
             game_state.wsize_updated = true;
             if let Ok(size) = terminal::window_size() {
                 game_state.wsize = size;
             }
-            let _ = game_state.render(); // render immediately to reflect new bounds
+            let _ = renderer.render(); // render immediately to reflect new bounds
             false
         }
         GameEvent::MovePlayerLeft => {
@@ -310,15 +294,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         wsize_updated: true,
         player,
         wsize: terminal::window_size()?,
-        stdout,
     };
 
-    if let Err(e) = game_state.render() {
+    let mut renderer = Render { stdout, game_state };
+
+    if let Err(e) = renderer.render() {
         // We drop errors to keep and return the game_state.render() error instead
         if kb_enhanced {
-            let _ = game_state.stdout.execute(PopKeyboardEnhancementFlags);
+            let _ = renderer.stdout.execute(PopKeyboardEnhancementFlags);
         }
-        let _ = game_state.stdout.execute(cursor::Show);
+        let _ = renderer.stdout.execute(cursor::Show);
         let _ = terminal::disable_raw_mode();
 
         return Err(e);
@@ -335,7 +320,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(event) => match event {
                 GameEvent::Quit => break,
                 other => {
-                    tick_pending |= handle_event(other, &mut game_state);
+                    tick_pending |= handle_event(other, &mut renderer);
                 }
             },
             Err(_) => continue,
@@ -349,7 +334,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     return Ok(());
                 }
                 other => {
-                    tick_pending |= handle_event(other, &mut game_state);
+                    tick_pending |= handle_event(other, &mut renderer);
                 }
             }
         }
@@ -361,10 +346,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             // Clamp dt to reduce perceived speed changes when we fall behind
             dt = dt.min(max_dt);
 
-            game_state.player.update(dt.max(fixed_dt).min(max_dt));
-            game_state.player_updated = true;
+            renderer
+                .game_state
+                .player
+                .update(dt.max(fixed_dt).min(max_dt));
+            renderer.game_state.player_updated = true;
 
-            match game_state.render() {
+            match renderer.render() {
                 Ok(_) => continue,
                 Err(_) => {
                     break;
@@ -375,10 +363,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Disable keyboard enhancement (if enabled), show cursor again, and disable raw mode before exiting
     if kb_enhanced {
-        let _ = game_state.stdout.execute(PopKeyboardEnhancementFlags);
+        let _ = renderer.stdout.execute(PopKeyboardEnhancementFlags);
     }
-    game_state.stdout.execute(Clear(ClearType::All))?;
-    game_state.stdout.execute(cursor::Show)?;
+    renderer.stdout.execute(Clear(ClearType::All))?;
+    renderer.stdout.execute(cursor::Show)?;
     terminal::disable_raw_mode()?;
 
     Ok(())
