@@ -4,13 +4,8 @@ use std::error::Error;
 use std::io::{Stdout, Write};
 
 use crossterm::{
-    ExecutableCommand, cursor,
-    event::{
-        Event, KeyCode, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
-        PushKeyboardEnhancementFlags, read,
-    },
-    queue,
-    terminal::{self, Clear, ClearType},
+    cursor, queue,
+    terminal::{Clear, ClearType},
 };
 const SCREEN_WIDTH: u16 = 120;
 const SCREEN_HEIGHT: u16 = 40;

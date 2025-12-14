@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::io::{Stdout, Write, stdout};
+use std::io::stdout;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
