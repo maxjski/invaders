@@ -1,7 +1,7 @@
 use crate::state::GameState;
 use crossterm::terminal::WindowSize;
 use std::error::Error;
-use std::io::Stdout;
+use std::io::{Stdout, Write};
 
 use crossterm::{
     ExecutableCommand, cursor,
@@ -12,7 +12,6 @@ use crossterm::{
     queue,
     terminal::{self, Clear, ClearType},
 };
-
 const SCREEN_WIDTH: u16 = 120;
 const SCREEN_HEIGHT: u16 = 40;
 
@@ -22,7 +21,25 @@ pub struct Render {
 }
 
 impl Render {
-    fn get_game_bounds(self) -> (u16, u16, u16, u16) {
+    fn render(&mut self) -> Result<(), Box<dyn Error>> {
+        if self.game_state.wsize_updated {
+            self.game_state.wsize_updated = false;
+
+            self.render_borders()?;
+            self.game_state.player_updated = true;
+        }
+        if self.game_state.player_updated {
+            self.game_state.player_updated = false;
+            let (left, _, _, bottom) = self.get_game_bounds();
+
+            self.game_state
+                .player
+                .render_player(left, bottom, &mut self.stdout)?;
+        }
+        Ok(())
+    }
+
+    fn get_game_bounds(&self) -> (u16, u16, u16, u16) {
         let center_x = self.game_state.wsize.columns / 2;
         let center_y = self.game_state.wsize.rows / 2;
         let half_w = SCREEN_WIDTH / 2;
@@ -36,10 +53,10 @@ impl Render {
         (left, right, top, bottom)
     }
 
-    fn render_borders(&mut self, wsize: &WindowSize) -> Result<(), Box<dyn Error>> {
-        let stdout = self.stdout;
-
+    fn render_borders(&mut self) -> Result<(), Box<dyn Error>> {
         let (left, right, top, bottom) = self.get_game_bounds();
+        let wsize = &self.game_state.wsize;
+        let stdout = &mut self.stdout;
 
         queue!(stdout, Clear(ClearType::All))?;
 
