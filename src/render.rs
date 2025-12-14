@@ -34,9 +34,7 @@ impl Render {
             self.game_state.player_updated = false;
             let (left, _, _, bottom) = self.get_game_bounds();
 
-            self.game_state
-                .player
-                .render_player(left, bottom, &mut self.stdout)?;
+            self.render_player(left, bottom)?;
         }
         Ok(())
     }
@@ -97,6 +95,56 @@ impl Render {
             queue!(stdout, cursor::MoveTo(right, y))?;
             write!(stdout, "#")?;
         }
+
+        stdout.flush()?;
+
+        Ok(())
+    }
+
+    fn render_player(&mut self, left_x: u16, bottom_y: u16) -> Result<(), Box<dyn Error>> {
+        // Clear previous sprite location to avoid smearing when moving fast
+        let stdout = &mut self.stdout;
+        let prev_x = left_x + self.game_state.player.prev_position;
+        let player_pos = self.game_state.player.position;
+        let clear_str = "       "; // width covering sprite plus padding
+        queue!(
+            stdout,
+            cursor::MoveTo(prev_x.saturating_sub(1), bottom_y - 7)
+        )?;
+        write!(stdout, "{}", clear_str)?;
+        queue!(
+            stdout,
+            cursor::MoveTo(prev_x.saturating_sub(1), bottom_y - 6)
+        )?;
+        write!(stdout, "{}", clear_str)?;
+
+        queue!(
+            stdout,
+            cursor::MoveTo(left_x + player_pos - 1, bottom_y - 7)
+        )?;
+        write!(stdout, " ")?;
+        queue!(
+            stdout,
+            cursor::MoveTo(left_x + player_pos + 5, bottom_y - 7)
+        )?;
+        write!(stdout, " ")?;
+
+        queue!(
+            stdout,
+            cursor::MoveTo(left_x + player_pos - 1, bottom_y - 6)
+        )?;
+        write!(stdout, " ")?;
+        queue!(
+            stdout,
+            cursor::MoveTo(left_x + player_pos + 5, bottom_y - 6)
+        )?;
+        write!(stdout, " ")?;
+
+        queue!(stdout, cursor::MoveTo(left_x + player_pos, bottom_y - 7))?;
+        write!(stdout, "⣆⡜⣛⢣⣠")?;
+
+        queue!(stdout, cursor::MoveTo(left_x + player_pos, bottom_y - 6))?;
+        write!(stdout, "⣿⣿⣿⣿⣿")?;
 
         stdout.flush()?;
 
