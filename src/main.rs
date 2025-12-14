@@ -155,7 +155,6 @@ enum Direction {
 }
 
 struct PlayerShip {
-    hp: u32,
     position: u16,
     prev_position: u16,
     speed: f32,
@@ -316,7 +315,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     queue!(stdout, cursor::Hide)?;
 
     let player = PlayerShip {
-        hp: 100,
         position: 55,
         prev_position: 55,
         speed: 30.0,
