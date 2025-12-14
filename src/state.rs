@@ -7,9 +7,7 @@ pub enum Direction {
 }
 
 pub struct GameState {
-    pub wsize_updated: bool,
     pub player_updated: bool,
-    pub wsize: WindowSize,
     pub player: PlayerShip,
 }
 

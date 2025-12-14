@@ -16,14 +16,16 @@ const SCREEN_WIDTH: u16 = 120;
 const SCREEN_HEIGHT: u16 = 40;
 
 pub struct Render {
+    pub wsize_updated: bool,
     pub stdout: Stdout,
     pub game_state: GameState,
+    pub wsize: WindowSize,
 }
 
 impl Render {
     pub fn render(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.game_state.wsize_updated {
-            self.game_state.wsize_updated = false;
+        if self.wsize_updated {
+            self.wsize_updated = false;
 
             self.render_borders()?;
             self.game_state.player_updated = true;
@@ -40,8 +42,8 @@ impl Render {
     }
 
     fn get_game_bounds(&self) -> (u16, u16, u16, u16) {
-        let center_x = self.game_state.wsize.columns / 2;
-        let center_y = self.game_state.wsize.rows / 2;
+        let center_x = self.wsize.columns / 2;
+        let center_y = self.wsize.rows / 2;
         let half_w = SCREEN_WIDTH / 2;
         let half_h = SCREEN_HEIGHT / 2;
 
@@ -55,7 +57,7 @@ impl Render {
 
     fn render_borders(&mut self) -> Result<(), Box<dyn Error>> {
         let (left, right, top, bottom) = self.get_game_bounds();
-        let wsize = &self.game_state.wsize;
+        let wsize = &self.wsize;
         let stdout = &mut self.stdout;
 
         queue!(stdout, Clear(ClearType::All))?;

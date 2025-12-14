@@ -32,9 +32,9 @@ fn handle_event(event: GameEvent, renderer: &mut Render) -> bool {
     let game_state = &mut renderer.game_state;
     match event {
         GameEvent::ResizeGame => {
-            game_state.wsize_updated = true;
+            renderer.wsize_updated = true;
             if let Ok(size) = terminal::window_size() {
-                game_state.wsize = size;
+                renderer.wsize = size;
             }
             let _ = renderer.render(); // render immediately to reflect new bounds
             false
@@ -154,6 +154,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
+    // handle events
     thread::spawn(move || {
         loop {
             match read() {
@@ -219,12 +220,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Each frame is a list of lines
     let game_state = GameState {
         player_updated: true,
-        wsize_updated: true,
         player,
-        wsize: terminal::window_size()?,
     };
 
-    let mut renderer = Render { stdout, game_state };
+    let mut renderer = Render {
+        stdout,
+        game_state,
+        wsize: terminal::window_size()?,
+        wsize_updated: true,
+    };
 
     if let Err(e) = renderer.render() {
         // We drop errors to keep and return the game_state.render() error instead
