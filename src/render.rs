@@ -33,9 +33,12 @@ impl Render {
         }
 
         for (_id, (pos, prev_pos, renderable)) in
-            world.query_mut::<(&Position, &PrevPosition, &Renderable)>()
+            world.query_mut::<(&Position, &PrevPosition, &mut Renderable)>()
         {
             self.draw_entity(left, bottom, pos, prev_pos, renderable)?;
+            if renderable.destroy {
+                renderable.erased = true;
+            }
         }
 
         self.stdout.flush()?;
@@ -91,14 +94,16 @@ impl Render {
         write!(self.stdout, "{}", erasor)?;
 
         // Draw new sprite
-        queue!(self.stdout, cursor::MoveTo(left + pos.x, bottom - pos.y))?;
-        write!(self.stdout, "{}", renderable.sprite_top)?;
+        if !renderable.destroy {
+            queue!(self.stdout, cursor::MoveTo(left + pos.x, bottom - pos.y))?;
+            write!(self.stdout, "{}", renderable.sprite_top)?;
 
-        queue!(
-            self.stdout,
-            cursor::MoveTo(left + pos.x, bottom - pos.y + 1)
-        )?;
-        write!(self.stdout, "{}", renderable.sprite_bottom)?;
+            queue!(
+                self.stdout,
+                cursor::MoveTo(left + pos.x, bottom - pos.y + 1)
+            )?;
+            write!(self.stdout, "{}", renderable.sprite_bottom)?;
+        }
 
         Ok(())
     }

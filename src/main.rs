@@ -26,10 +26,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     let stdout = stdout();
 
     // World setup
-    let world = World::new();
+    let mut world = World::new();
+
+    let player_entity = world.spawn((
+        Player,
+        Position { x: 55, y: 7 },
+        PrevPosition { x: 55, y: 7 },
+        Velocity {
+            speed: 60.0,
+            move_accumulator: 0.0,
+            direction: Direction::None,
+        },
+        Renderable {
+            sprite_top: "⣆⡜⣛⢣⣠",
+            sprite_bottom: "⣿⣿⣿⣿⣿",
+            width: 5,
+            destroy: false,
+            erased: false,
+        },
+    ));
 
     // Each frame is a list of lines
-    let mut game_state = GameState { world };
+    let mut game_state = GameState {
+        world,
+        player_entity,
+        player_projectile_exists: false,
+    };
 
     game_state.world.spawn((
         Player,
@@ -44,6 +66,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             sprite_top: "⣆⡜⣛⢣⣠",
             sprite_bottom: "⣿⣿⣿⣿⣿",
             width: 5,
+            destroy: false,
+            erased: false,
         },
     ));
 
@@ -77,7 +101,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(event) => match event {
                 GameEvent::Quit => break,
                 other => {
-                    tick_pending |= handle_event(other, &mut renderer, &mut game_state.world);
+                    tick_pending |= handle_event(other, &mut renderer, &mut game_state);
                 }
             },
             Err(_) => continue,
@@ -91,7 +115,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     return Ok(());
                 }
                 other => {
-                    tick_pending |= handle_event(other, &mut renderer, &mut game_state.world);
+                    tick_pending |= handle_event(other, &mut renderer, &mut game_state);
                 }
             }
         }
@@ -103,7 +127,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             // Clamp dt to reduce perceived speed changes when we fall behind
             dt = dt.min(max_dt);
 
-            movement_system(dt.max(fixed_dt).min(max_dt), &mut game_state.world);
+            movement_system(dt.max(fixed_dt).min(max_dt), &mut game_state)?;
             renderer.render(&mut game_state.world)?;
 
             match renderer.render(&mut game_state.world) {

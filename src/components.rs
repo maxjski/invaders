@@ -24,6 +24,10 @@ pub struct Renderable {
     pub sprite_top: &'static str,
     pub sprite_bottom: &'static str,
     pub width: u16,
+    pub destroy: bool,
+    pub erased: bool,
 }
 
 pub struct Player;
+
+pub struct PlayerProjectile;
