@@ -4,7 +4,6 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crossterm::terminal::WindowSize;
 use crossterm::{
     ExecutableCommand, cursor,
     event::{
@@ -19,77 +18,6 @@ mod render;
 mod state;
 use crate::render::*;
 use crate::state::*;
-
-const SCREEN_WIDTH: u16 = 120;
-const SCREEN_HEIGHT: u16 = 40;
-
-fn get_game_bounds(wsize: &WindowSize) -> (u16, u16, u16, u16) {
-    let center_x = wsize.columns / 2;
-    let center_y = wsize.rows / 2;
-    let half_w = SCREEN_WIDTH / 2;
-    let half_h = SCREEN_HEIGHT / 2;
-
-    let left = center_x.saturating_sub(half_w);
-    let right = center_x + half_w - 1; // -1 to fit inside width
-    let top = center_y.saturating_sub(half_h);
-    let bottom = center_y + half_h;
-
-    (left, right, top, bottom)
-}
-
-fn render_borders(wsize: &WindowSize, stdout: &mut Stdout) -> Result<(), Box<dyn Error>> {
-    let center_x = wsize.columns / 2;
-    let center_y = wsize.rows / 2;
-    let half_w = SCREEN_WIDTH / 2;
-    let half_h = SCREEN_HEIGHT / 2;
-
-    let left = center_x.saturating_sub(half_w);
-    let right = center_x + half_w - 1;
-    let top = center_y.saturating_sub(half_h);
-    let bottom = center_y + half_h;
-
-    queue!(stdout, Clear(ClearType::All))?;
-
-    // Check if terminal is too small
-    if wsize.rows < SCREEN_HEIGHT + 5 || wsize.columns < SCREEN_WIDTH + 5 {
-        queue!(stdout, cursor::MoveTo(0, 0))?;
-        write!(stdout, "Terminal too small")?;
-        stdout.flush()?;
-        return Ok(());
-    }
-
-    let horizontal_wall = "#".repeat(SCREEN_WIDTH as usize);
-
-    // Draw Top Wall
-    queue!(stdout, cursor::MoveTo(left, top))?;
-    write!(stdout, "{}", horizontal_wall)?;
-
-    // Draw Bottom Wall
-    queue!(stdout, cursor::MoveTo(left, bottom))?;
-    write!(stdout, "{}", horizontal_wall)?;
-
-    queue!(stdout, cursor::MoveTo(left, bottom - 4))?;
-    write!(stdout, "{}", horizontal_wall)?;
-
-    queue!(stdout, cursor::MoveTo(left + 2, bottom - 2))?;
-    write!(stdout, "q - exit")?;
-
-    for i in 0..SCREEN_HEIGHT {
-        let y = top + i;
-
-        // Left wall
-        queue!(stdout, cursor::MoveTo(left, y))?;
-        write!(stdout, "#")?;
-
-        // Right wall
-        queue!(stdout, cursor::MoveTo(right, y))?;
-        write!(stdout, "#")?;
-    }
-
-    stdout.flush()?;
-
-    Ok(())
-}
 
 enum GameEvent {
     ResizeGame,
@@ -289,7 +217,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     // Each frame is a list of lines
-    let mut game_state = GameState {
+    let game_state = GameState {
         player_updated: true,
         wsize_updated: true,
         player,
