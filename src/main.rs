@@ -15,16 +15,12 @@ use crossterm::{
     terminal::{self, Clear, ClearType},
 };
 
+mod render;
+mod state;
+use crate::state::*;
+
 const SCREEN_WIDTH: u16 = 120;
 const SCREEN_HEIGHT: u16 = 40;
-
-struct GameState {
-    wsize_updated: bool,
-    player_updated: bool,
-    wsize: terminal::WindowSize,
-    stdout: Stdout,
-    player: PlayerShip,
-}
 
 fn get_game_bounds(wsize: &WindowSize) -> (u16, u16, u16, u16) {
     let center_x = wsize.columns / 2;
@@ -146,20 +142,6 @@ fn handle_event(event: GameEvent, game_state: &mut GameState) -> bool {
         GameEvent::Tick => true,
         GameEvent::Quit => false,
     }
-}
-
-enum Direction {
-    Right,
-    Left,
-    None,
-}
-
-struct PlayerShip {
-    position: u16,
-    prev_position: u16,
-    speed: f32,
-    move_accumulator: f32,
-    direction: Direction,
 }
 
 impl PlayerShip {
