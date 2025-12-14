@@ -31,3 +31,7 @@ pub struct Renderable {
 pub struct Player;
 
 pub struct PlayerProjectile;
+
+pub struct Enemy;
+
+pub struct EnemyProjectile;
