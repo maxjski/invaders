@@ -1,9 +1,52 @@
 use crate::{
-    Direction, GameState, Player, PlayerProjectile, Position, PrevPosition, Renderable, Velocity,
+    Direction, GameState, Player, PlayerProjectile, Position, PrevPosition, Render, Renderable,
+    Velocity,
 };
+use crossterm::terminal;
 use hecs::Entity;
+use hecs::World;
 use std::error::Error;
+use std::io::stdout;
 use std::time::Duration;
+
+pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
+    let mut world = World::new();
+
+    let player_entity = world.spawn((
+        Player,
+        Position { x: 55, y: 7 },
+        PrevPosition { x: 55, y: 7 },
+        Velocity {
+            speed: 60.0,
+            move_accumulator: 0.0,
+            direction: Direction::None,
+        },
+        Renderable {
+            sprite_top: "⣆⡜⣛⢣⣠",
+            sprite_bottom: "⣿⣿⣿⣿⣿",
+            width: 5,
+            destroy: false,
+            erased: false,
+        },
+    ));
+
+    // Each frame is a list of lines
+    let game_state = GameState {
+        world,
+        player_entity,
+        player_projectile_exists: false,
+    };
+
+    let stdout = stdout();
+
+    let renderer = Render {
+        stdout,
+        wsize: terminal::window_size()?,
+        wsize_updated: true,
+    };
+
+    Ok((game_state, renderer))
+}
 
 pub fn movement_system(
     delta_time: Duration,

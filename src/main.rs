@@ -1,11 +1,8 @@
 use std::error::Error;
-use std::io::stdout;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use crossterm::{ExecutableCommand, cursor, event::PopKeyboardEnhancementFlags, terminal};
-
-use hecs::World;
 
 mod components;
 mod events;
@@ -23,41 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     spawn_coordination_threads(tx);
 
-    let stdout = stdout();
-
-    // World setup
-    let mut world = World::new();
-
-    let player_entity = world.spawn((
-        Player,
-        Position { x: 55, y: 7 },
-        PrevPosition { x: 55, y: 7 },
-        Velocity {
-            speed: 60.0,
-            move_accumulator: 0.0,
-            direction: Direction::None,
-        },
-        Renderable {
-            sprite_top: "⣆⡜⣛⢣⣠",
-            sprite_bottom: "⣿⣿⣿⣿⣿",
-            width: 5,
-            destroy: false,
-            erased: false,
-        },
-    ));
-
-    // Each frame is a list of lines
-    let mut game_state = GameState {
-        world,
-        player_entity,
-        player_projectile_exists: false,
-    };
-
-    let mut renderer = Render {
-        stdout,
-        wsize: terminal::window_size()?,
-        wsize_updated: true,
-    };
+    let (mut game_state, mut renderer) = create_world()?;
 
     let kb_enhanced = renderer.terminal_raw_mode()?;
 
