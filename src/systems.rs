@@ -34,18 +34,24 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
     ));
 
     // TODO: Spawn enemies
-    world.spawn((
-        Enemy,
-        Position { x: 2, y: 38 },
-        PrevPosition { x: 2, y: 38 },
-        Renderable {
-            sprite_top: "⢳⡴⠶⢦⡞",
-            sprite_bottom: "⠞⠫⡪⠋⠱",
-            width: 5,
-            destroy: false,
-            erased: false,
-        },
-    ));
+
+    for x in 0..10 {
+        world.spawn((
+            Enemy,
+            Position {
+                x: 2 + x * 7,
+                y: 38,
+            },
+            PrevPosition { x: 2, y: 38 },
+            Renderable {
+                sprite_top: "⢳⡴⠶⢦⡞",
+                sprite_bottom: "⠞⠫⡪⠋⠱",
+                width: 5,
+                destroy: false,
+                erased: false,
+            },
+        ));
+    }
 
     // Each frame is a list of lines
     let game_state = GameState {
