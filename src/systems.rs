@@ -1,3 +1,4 @@
+use crate::render;
 use crate::{
     Direction, Enemy, GameState, Player, PlayerProjectile, Position, PrevPosition, Render,
     Renderable, Velocity,
@@ -228,7 +229,39 @@ pub fn movement_system(
         }
     }
 
-    Ok(())
+    // We have moved everything by this point, now we run collision detection
+    // if it exists, we will check for collisions
+    let mut entities_hit: Vec<Entity> = Vec::new();
 
-    // for (_, ()) in world.query_many_mut::<&Enemy, >
+    {
+        let projectile_data = world
+            .query::<&Position>()
+            .with::<&PlayerProjectile>()
+            .iter()
+            .map(|(id, pos)| (id, *pos))
+            .next();
+
+        if let Some((proj_id, proj_pos)) = projectile_data {
+            for (enemy_id, (enemy_pos, renderable)) in world
+                .query_mut::<(&Position, &Renderable)>()
+                .with::<&Enemy>()
+            {
+                if proj_pos.x > enemy_pos.x
+                    && proj_pos.x < enemy_pos.x + renderable.width
+                    && proj_pos.y == enemy_pos.y
+                {
+                    entities_hit.push(proj_id);
+                    entities_hit.push(enemy_id);
+                }
+            }
+        }
+    }
+
+    for entity_id in entities_hit {
+        if let Ok(mut renderable) = world.get::<&mut Renderable>(entity_id) {
+            renderable.destroy = true;
+        }
+    }
+
+    Ok(())
 }

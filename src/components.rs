@@ -4,6 +4,7 @@ pub enum Direction {
     None,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Position {
     pub x: u16,
     pub y: u16,
