@@ -54,6 +54,11 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
                     destroy: false,
                     erased: false,
                 },
+                Velocity {
+                    speed: 20.0,
+                    move_accumulator: 0.0,
+                    direction: Direction::None, // Enemy directon is stored in game state
+                },
             ));
         }
     }
@@ -62,6 +67,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         world,
         player_entity,
         player_projectile_exists: false,
+        enemy_direction: Direction::Right,
     };
 
     let stdout = stdout();
@@ -160,5 +166,66 @@ pub fn movement_system(
         world.despawn(player_projectile)?;
         game_state.player_projectile_exists = false;
     }
+
+    // move enemies
+    let mut enemies_hit_wall = false;
+    for (_id, (pos, prev_pos, vel)) in world
+        .query_mut::<(&mut Position, &mut PrevPosition, &mut Velocity)>()
+        .with::<&Enemy>()
+    {
+        match game_state.enemy_direction {
+            Direction::Right => {
+                vel.move_accumulator += vel.speed * delta_time.as_secs_f32();
+            }
+            Direction::Left => {
+                vel.move_accumulator -= vel.speed * delta_time.as_secs_f32();
+            }
+            Direction::None => {
+                vel.move_accumulator = 0.0;
+            }
+        }
+
+        if vel.move_accumulator >= 1.0 || vel.move_accumulator <= -1.0 {
+            // Move in whole-cell steps, keep fractional remainder to avoid drift and asymmetry
+            let steps = vel.move_accumulator.trunc();
+            let new_pos = pos.x as i32 + steps as i32;
+
+            let old_pos = pos.x;
+            prev_pos.x = old_pos;
+            prev_pos.y = pos.y;
+
+            if new_pos < 3 {
+                pos.x = 2;
+                enemies_hit_wall = true;
+            } else if new_pos > 112 {
+                pos.x = 113;
+                enemies_hit_wall = true;
+            } else {
+                pos.x = new_pos as u16;
+            }
+
+            vel.move_accumulator -= steps;
+        }
+    }
+
+    if enemies_hit_wall {
+        match game_state.enemy_direction {
+            Direction::Right => game_state.enemy_direction = Direction::Left,
+            Direction::Left => game_state.enemy_direction = Direction::Right,
+            Direction::None => game_state.enemy_direction = Direction::None,
+        }
+
+        for (_id, (pos, prev_pos)) in world
+            .query_mut::<(&mut Position, &mut PrevPosition)>()
+            .with::<&Enemy>()
+        {
+            let old_pos = pos.y;
+            prev_pos.y = old_pos;
+            pos.y = old_pos - 1;
+        }
+    }
+
     Ok(())
+
+    // for (_, ()) in world.query_many_mut::<&Enemy, >
 }
