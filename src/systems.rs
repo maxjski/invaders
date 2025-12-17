@@ -1,4 +1,3 @@
-use crate::render;
 use crate::{
     Direction, Enemy, GameState, Player, PlayerProjectile, Position, PrevPosition, Render,
     Renderable, Velocity,
@@ -231,6 +230,28 @@ pub fn movement_system(
 
     // We have moved everything by this point, now we run collision detection
     // if it exists, we will check for collisions
+    enemy_collision_detection(world);
+    entity_cleanup(world)?;
+
+    Ok(())
+}
+
+fn entity_cleanup(world: &mut World) -> Result<(), Box<dyn Error>> {
+    let mut entities_erased: Vec<Entity> = Vec::new();
+
+    for (id, renderable) in world.query_mut::<&Renderable>() {
+        if renderable.erased {
+            entities_erased.push(id);
+        }
+    }
+
+    for entity_id in entities_erased {
+        world.despawn(entity_id)?;
+    }
+
+    Ok(())
+}
+fn enemy_collision_detection(world: &mut World) {
     let mut entities_hit: Vec<Entity> = Vec::new();
 
     {
@@ -262,6 +283,4 @@ pub fn movement_system(
             renderable.destroy = true;
         }
     }
-
-    Ok(())
 }
