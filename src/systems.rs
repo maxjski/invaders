@@ -260,6 +260,12 @@ fn entity_cleanup(world: &mut World) -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+// TODO: Collision system is quite bad:
+// Instead it should detect any objects with Positions and we need a new
+// property like 'Collides'. We should create a map of collisions that occured
+// with defined behaviors. Collides could be an enum struct with Collides::LoseHP or
+// Collides::DestroySelf etc
 fn enemy_collision_detection(game_state: &mut GameState) {
     let mut entities_hit: Vec<Entity> = Vec::new();
     let mut need_enemies = false;
