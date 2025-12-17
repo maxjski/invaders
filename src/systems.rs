@@ -33,8 +33,33 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         },
     ));
 
-    // TODO: Spawn enemies
+    spawn_enemies(1.0, &mut world);
 
+    // Each frame is a list of lines
+    let game_state = GameState {
+        world,
+        player_entity,
+        player_projectile_exists: false,
+        enemy_direction: Direction::Right,
+        score_updated: true,
+        score: 0,
+        enemy_speed_multiplier: 1.0,
+        enemy_amount: 30,
+        game_over: false,
+    };
+
+    let stdout = stdout();
+
+    let renderer = Render {
+        stdout,
+        wsize: terminal::window_size()?,
+        wsize_updated: true,
+    };
+
+    Ok((game_state, renderer))
+}
+
+fn spawn_enemies(speed_multiplier: f32, world: &mut World) {
     for x in 0..10 {
         for y in 0..3 {
             world.spawn((
@@ -55,33 +80,13 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
                     erased: false,
                 },
                 Velocity {
-                    speed: 20.0,
+                    speed: 20.0 * speed_multiplier,
                     move_accumulator: 0.0,
                     direction: Direction::None, // Enemy directon is stored in game state
                 },
             ));
         }
     }
-    // Each frame is a list of lines
-    let game_state = GameState {
-        world,
-        player_entity,
-        player_projectile_exists: false,
-        enemy_direction: Direction::Right,
-        score_updated: true,
-        score: 0,
-        enemy_speed_multiplier: 1.0,
-    };
-
-    let stdout = stdout();
-
-    let renderer = Render {
-        stdout,
-        wsize: terminal::window_size()?,
-        wsize_updated: true,
-    };
-
-    Ok((game_state, renderer))
 }
 
 pub fn movement_system(
@@ -226,6 +231,10 @@ pub fn movement_system(
             let old_pos = pos.y;
             prev_pos.y = old_pos;
             pos.y = old_pos - 1;
+            if pos.y <= 10 {
+                // Enemies flew too low
+                game_state.game_over = true;
+            }
         }
     }
 
@@ -252,6 +261,7 @@ fn entity_cleanup(world: &mut World) -> Result<(), Box<dyn Error>> {
 }
 fn enemy_collision_detection(game_state: &mut GameState) {
     let mut entities_hit: Vec<Entity> = Vec::new();
+    let mut need_enemies = false;
 
     {
         let projectile_data = game_state
@@ -268,17 +278,28 @@ fn enemy_collision_detection(game_state: &mut GameState) {
                 .query_mut::<(&Position, &Renderable)>()
                 .with::<&Enemy>()
             {
-                if proj_pos.x > enemy_pos.x
-                    && proj_pos.x < enemy_pos.x + renderable.width
+                if proj_pos.x >= enemy_pos.x
+                    && proj_pos.x <= enemy_pos.x + renderable.width
                     && proj_pos.y == enemy_pos.y
                 {
                     entities_hit.push(proj_id);
                     entities_hit.push(enemy_id);
                     game_state.score += 10;
                     game_state.score_updated = true;
+                    if game_state.enemy_amount == 1 {
+                        game_state.enemy_speed_multiplier *= 1.5;
+                        game_state.enemy_amount = 30;
+                        need_enemies = true;
+                    } else {
+                        game_state.enemy_amount -= 1;
+                    }
                 }
             }
         }
+    }
+
+    if need_enemies {
+        spawn_enemies(game_state.enemy_speed_multiplier, &mut game_state.world);
     }
 
     for entity_id in entities_hit {
