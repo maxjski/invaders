@@ -14,6 +14,7 @@ use crossterm::{
 use crate::{Position, PrevPosition, Renderable, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub struct Render {
+    pub score_updated: bool,
     pub wsize_updated: bool,
     pub stdout: Stdout,
     pub wsize: WindowSize,

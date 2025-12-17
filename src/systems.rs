@@ -1,6 +1,6 @@
 use crate::{
-    Direction, Enemy, EnemyProjectile, GameState, Player, PlayerProjectile, Position, PrevPosition,
-    Render, Renderable, Velocity,
+    Direction, Enemy, GameState, Player, PlayerProjectile, Position, PrevPosition, Render,
+    Renderable, Velocity,
 };
 use crossterm::terminal;
 use hecs::Entity;
@@ -68,6 +68,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         player_entity,
         player_projectile_exists: false,
         enemy_direction: Direction::Right,
+        score: 0,
     };
 
     let stdout = stdout();
@@ -76,6 +77,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         stdout,
         wsize: terminal::window_size()?,
         wsize_updated: true,
+        score_updated: false,
     };
 
     Ok((game_state, renderer))
@@ -208,6 +210,7 @@ pub fn movement_system(
         }
     }
 
+    // Switch enemy direction when wall is hit
     if enemies_hit_wall {
         match game_state.enemy_direction {
             Direction::Right => game_state.enemy_direction = Direction::Left,
