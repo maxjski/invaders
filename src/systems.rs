@@ -36,23 +36,27 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
     // TODO: Spawn enemies
 
     for x in 0..10 {
-        world.spawn((
-            Enemy,
-            Position {
-                x: 2 + x * 7,
-                y: 38,
-            },
-            PrevPosition { x: 2, y: 38 },
-            Renderable {
-                sprite_top: "⢳⡴⠶⢦⡞",
-                sprite_bottom: "⠞⠫⡪⠋⠱",
-                width: 5,
-                destroy: false,
-                erased: false,
-            },
-        ));
+        for y in 0..3 {
+            world.spawn((
+                Enemy,
+                Position {
+                    x: 6 + x * 7,
+                    y: 38 - y * 4,
+                },
+                PrevPosition {
+                    x: 6 + x * 7,
+                    y: 38 - y * 4,
+                },
+                Renderable {
+                    sprite_top: "⢳⡴⠶⢦⡞",
+                    sprite_bottom: "⠞⠫⡪⠋⠱",
+                    width: 5,
+                    destroy: false,
+                    erased: false,
+                },
+            ));
+        }
     }
-
     // Each frame is a list of lines
     let game_state = GameState {
         world,
@@ -113,7 +117,7 @@ pub fn movement_system(
         }
     }
 
-    // Move PlayerProjectile
+    // Queued for destruction if exists
     let mut player_projectile: Option<Entity> = Option::None;
     for (id, (pos, prev_pos, vel, renderable)) in world
         .query_mut::<(
@@ -151,6 +155,7 @@ pub fn movement_system(
         }
     }
 
+    // If player projectile is assigned, we need to destory it
     if let Some(player_projectile) = player_projectile {
         world.despawn(player_projectile)?;
         game_state.player_projectile_exists = false;
