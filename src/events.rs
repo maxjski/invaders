@@ -19,6 +19,7 @@ pub enum GameEvent {
     MovePlayerRight,
     MovePlayerStop,
     PlayerShoot,
+    Pause,
 }
 
 pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut GameState) -> bool {
@@ -99,6 +100,10 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             }
             false
         }
+        GameEvent::Pause => {
+            game_state.paused = !game_state.paused;
+            false
+        }
         GameEvent::Tick => true,
         GameEvent::Quit => false,
     }
@@ -146,6 +151,11 @@ pub fn spawn_coordination_threads(tx: Sender<GameEvent>) {
                             }
                         } else if key_event.code == KeyCode::Char('w') {
                             match tx.send(GameEvent::PlayerShoot) {
+                                Ok(_) => continue,
+                                Err(_) => break,
+                            }
+                        } else if key_event.code == KeyCode::Char('p') && key_event.is_press() {
+                            match tx.send(GameEvent::Pause) {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }

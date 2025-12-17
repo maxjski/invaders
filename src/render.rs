@@ -1,8 +1,6 @@
 use std::error::Error;
 use std::io::{Stdout, Write};
 
-use hecs::World;
-
 use crossterm::terminal::WindowSize;
 use crossterm::{
     ExecutableCommand, cursor,
@@ -23,15 +21,27 @@ impl Render {
     pub fn render(&mut self, game_state: &mut GameState) -> Result<(), Box<dyn Error>> {
         let (left, _, _, bottom) = self.get_game_bounds();
 
-        if self.wsize_updated {
+        if self.wsize.rows < SCREEN_HEIGHT + 5 || self.wsize.columns < SCREEN_WIDTH + 5 {
+            queue!(self.stdout, Clear(ClearType::All))?;
+            queue!(self.stdout, cursor::MoveTo(0, 0))?;
+            write!(self.stdout, "Terminal too small")?;
+            game_state.paused = true;
+            self.stdout.flush()?;
+            return Ok(());
+        } else {
+            game_state.paused = false;
+        }
+
+        if self.wsize_updated || game_state.paused {
             self.wsize_updated = false;
 
             self.render_borders()?;
+            self.draw_menu_items(game_state.score, game_state.paused)?;
         }
 
         if game_state.score_updated {
             game_state.score_updated = false;
-            self.draw_menu_items(game_state.score);
+            self.draw_menu_items(game_state.score, game_state.paused)?;
         }
 
         for (_id, (pos, prev_pos, renderable)) in
@@ -50,12 +60,19 @@ impl Render {
         Ok(())
     }
 
-    fn draw_menu_items(&mut self, score: i32) -> Result<(), Box<dyn Error>> {
+    fn draw_menu_items(&mut self, score: i32, paused: bool) -> Result<(), Box<dyn Error>> {
         let (left, _, _, bottom) = self.get_game_bounds();
         queue!(self.stdout, cursor::MoveTo(left + 2, bottom - 2))?;
         write!(self.stdout, "q - exit")?;
 
         queue!(self.stdout, cursor::MoveTo(left + 15, bottom - 2))?;
+        if paused {
+            write!(self.stdout, "p - unpause")?;
+        } else {
+            write!(self.stdout, "p - pause")?;
+        }
+
+        queue!(self.stdout, cursor::MoveTo(left + 28, bottom - 2))?;
         write!(self.stdout, "score - {}", score)?;
 
         Ok(())
@@ -148,20 +165,10 @@ impl Render {
 
     fn render_borders(&mut self) -> Result<(), Box<dyn Error>> {
         let (left, right, top, bottom) = self.get_game_bounds();
-        let wsize = &self.wsize;
         let stdout = &mut self.stdout;
 
-        queue!(stdout, Clear(ClearType::All))?;
-
-        // Check if terminal is too small
-        if wsize.rows < SCREEN_HEIGHT + 5 || wsize.columns < SCREEN_WIDTH + 5 {
-            queue!(stdout, cursor::MoveTo(0, 0))?;
-            write!(stdout, "Terminal too small")?;
-            stdout.flush()?;
-            return Ok(());
-        }
-
         let horizontal_wall = "#".repeat(SCREEN_WIDTH as usize);
+        queue!(stdout, Clear(ClearType::All))?;
 
         // Draw Top Wall
         queue!(stdout, cursor::MoveTo(left, top))?;

@@ -46,6 +46,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         enemy_speed_multiplier: 1.0,
         enemy_amount: 30,
         game_over: false,
+        paused: false,
     };
 
     let stdout = stdout();

@@ -66,6 +66,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if tick_pending {
+            if game_state.paused {
+                continue;
+            } else if game_state.game_over {
+                continue;
+            }
+
             let now = Instant::now();
             let mut dt = now.duration_since(last_frame_time);
             last_frame_time = now;

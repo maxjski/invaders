@@ -11,4 +11,5 @@ pub struct GameState {
     pub enemy_speed_multiplier: f32,
     pub enemy_amount: u16,
     pub game_over: bool,
+    pub paused: bool,
 }
