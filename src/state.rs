@@ -8,4 +8,5 @@ pub struct GameState {
     pub enemy_direction: Direction,
     pub score_updated: bool,
     pub score: i32,
+    pub enemy_speed_multiplier: f64,
 }

@@ -55,7 +55,7 @@ impl Render {
         queue!(self.stdout, cursor::MoveTo(left + 2, bottom - 2))?;
         write!(self.stdout, "q - exit")?;
 
-        queue!(self.stdout, cursor::MoveTo(left + 10, bottom - 2))?;
+        queue!(self.stdout, cursor::MoveTo(left + 15, bottom - 2))?;
         write!(self.stdout, "score - {}", score)?;
 
         Ok(())

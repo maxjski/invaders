@@ -70,6 +70,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         enemy_direction: Direction::Right,
         score_updated: true,
         score: 0,
+        enemy_speed_multiplier: 1.0,
     };
 
     let stdout = stdout();
