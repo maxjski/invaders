@@ -53,24 +53,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         player_projectile_exists: false,
     };
 
-    game_state.world.spawn((
-        Player,
-        Position { x: 55, y: 7 },
-        PrevPosition { x: 55, y: 7 },
-        Velocity {
-            speed: 60.0,
-            move_accumulator: 0.0,
-            direction: Direction::None,
-        },
-        Renderable {
-            sprite_top: "⣆⡜⣛⢣⣠",
-            sprite_bottom: "⣿⣿⣿⣿⣿",
-            width: 5,
-            destroy: false,
-            erased: false,
-        },
-    ));
-
     let mut renderer = Render {
         stdout,
         wsize: terminal::window_size()?,
