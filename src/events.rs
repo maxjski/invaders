@@ -28,7 +28,7 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             if let Ok(size) = terminal::window_size() {
                 renderer.wsize = size;
             }
-            let _ = renderer.render(&mut game_state.world); // render immediately to reflect new bounds
+            let _ = renderer.render(game_state); // render immediately to reflect new bounds
             false
         }
         GameEvent::PlayerShoot => {

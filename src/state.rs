@@ -6,5 +6,6 @@ pub struct GameState {
     pub player_entity: Entity,
     pub player_projectile_exists: bool,
     pub enemy_direction: Direction,
+    pub score_updated: bool,
     pub score: i32,
 }

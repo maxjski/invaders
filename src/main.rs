@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let kb_enhanced = renderer.terminal_raw_mode()?;
 
-    if let Err(e) = renderer.render(&mut game_state.world) {
+    if let Err(e) = renderer.render(&mut game_state) {
         // We drop errors to keep and return the game_state.render() error instead
         if kb_enhanced {
             let _ = renderer.stdout.execute(PopKeyboardEnhancementFlags);
@@ -73,9 +73,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             dt = dt.min(max_dt);
 
             movement_system(dt.max(fixed_dt).min(max_dt), &mut game_state)?;
-            renderer.render(&mut game_state.world)?;
 
-            match renderer.render(&mut game_state.world) {
+            match renderer.render(&mut game_state) {
                 Ok(_) => continue,
                 Err(_) => {
                     break;

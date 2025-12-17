@@ -68,6 +68,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         player_entity,
         player_projectile_exists: false,
         enemy_direction: Direction::Right,
+        score_updated: true,
         score: 0,
     };
 
@@ -77,7 +78,6 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         stdout,
         wsize: terminal::window_size()?,
         wsize_updated: true,
-        score_updated: false,
     };
 
     Ok((game_state, renderer))
@@ -228,10 +228,8 @@ pub fn movement_system(
         }
     }
 
-    // We have moved everything by this point, now we run collision detection
-    // if it exists, we will check for collisions
-    enemy_collision_detection(world);
-    entity_cleanup(world)?;
+    enemy_collision_detection(game_state);
+    entity_cleanup(&mut game_state.world)?;
 
     Ok(())
 }
@@ -251,11 +249,12 @@ fn entity_cleanup(world: &mut World) -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-fn enemy_collision_detection(world: &mut World) {
+fn enemy_collision_detection(game_state: &mut GameState) {
     let mut entities_hit: Vec<Entity> = Vec::new();
 
     {
-        let projectile_data = world
+        let projectile_data = game_state
+            .world
             .query::<&Position>()
             .with::<&PlayerProjectile>()
             .iter()
@@ -263,7 +262,8 @@ fn enemy_collision_detection(world: &mut World) {
             .next();
 
         if let Some((proj_id, proj_pos)) = projectile_data {
-            for (enemy_id, (enemy_pos, renderable)) in world
+            for (enemy_id, (enemy_pos, renderable)) in game_state
+                .world
                 .query_mut::<(&Position, &Renderable)>()
                 .with::<&Enemy>()
             {
@@ -273,13 +273,15 @@ fn enemy_collision_detection(world: &mut World) {
                 {
                     entities_hit.push(proj_id);
                     entities_hit.push(enemy_id);
+                    game_state.score += 10;
+                    game_state.score_updated = true;
                 }
             }
         }
     }
 
     for entity_id in entities_hit {
-        if let Ok(mut renderable) = world.get::<&mut Renderable>(entity_id) {
+        if let Ok(mut renderable) = game_state.world.get::<&mut Renderable>(entity_id) {
             renderable.destroy = true;
         }
     }

@@ -11,17 +11,16 @@ use crossterm::{
     terminal::{self, Clear, ClearType},
 };
 
-use crate::{Position, PrevPosition, Renderable, SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::{GameState, Position, PrevPosition, Renderable, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub struct Render {
-    pub score_updated: bool,
     pub wsize_updated: bool,
     pub stdout: Stdout,
     pub wsize: WindowSize,
 }
 
 impl Render {
-    pub fn render(&mut self, world: &mut World) -> Result<(), Box<dyn Error>> {
+    pub fn render(&mut self, game_state: &mut GameState) -> Result<(), Box<dyn Error>> {
         let (left, _, _, bottom) = self.get_game_bounds();
 
         if self.wsize_updated {
@@ -30,8 +29,15 @@ impl Render {
             self.render_borders()?;
         }
 
+        if game_state.score_updated {
+            game_state.score_updated = false;
+            self.draw_menu_items(game_state.score);
+        }
+
         for (_id, (pos, prev_pos, renderable)) in
-            world.query_mut::<(&Position, &PrevPosition, &mut Renderable)>()
+            game_state
+                .world
+                .query_mut::<(&Position, &PrevPosition, &mut Renderable)>()
         {
             self.draw_entity(left, bottom, pos, prev_pos, renderable)?;
             if renderable.destroy {
@@ -40,6 +46,17 @@ impl Render {
         }
 
         self.stdout.flush()?;
+
+        Ok(())
+    }
+
+    fn draw_menu_items(&mut self, score: i32) -> Result<(), Box<dyn Error>> {
+        let (left, _, _, bottom) = self.get_game_bounds();
+        queue!(self.stdout, cursor::MoveTo(left + 2, bottom - 2))?;
+        write!(self.stdout, "q - exit")?;
+
+        queue!(self.stdout, cursor::MoveTo(left + 10, bottom - 2))?;
+        write!(self.stdout, "score - {}", score)?;
 
         Ok(())
     }
@@ -101,6 +118,15 @@ impl Render {
                 cursor::MoveTo(left + pos.x, bottom - pos.y + 1)
             )?;
             write!(self.stdout, "{}", renderable.sprite_bottom)?;
+        } else {
+            queue!(self.stdout, cursor::MoveTo(left + pos.x, bottom - pos.y))?;
+            write!(self.stdout, "     ")?;
+
+            queue!(
+                self.stdout,
+                cursor::MoveTo(left + pos.x, bottom - pos.y + 1)
+            )?;
+            write!(self.stdout, "     ")?;
         }
 
         Ok(())
@@ -147,9 +173,6 @@ impl Render {
 
         queue!(stdout, cursor::MoveTo(left, bottom - 4))?;
         write!(stdout, "{}", horizontal_wall)?;
-
-        queue!(stdout, cursor::MoveTo(left + 2, bottom - 2))?;
-        write!(stdout, "q - exit")?;
 
         for i in 0..SCREEN_HEIGHT {
             let y = top + i;
