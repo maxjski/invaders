@@ -67,6 +67,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         if tick_pending {
             if game_state.paused {
+                renderer.render(&mut game_state);
                 continue;
             } else if game_state.game_over {
                 continue;

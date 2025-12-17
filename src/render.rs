@@ -25,14 +25,11 @@ impl Render {
             queue!(self.stdout, Clear(ClearType::All))?;
             queue!(self.stdout, cursor::MoveTo(0, 0))?;
             write!(self.stdout, "Terminal too small")?;
-            game_state.paused = true;
             self.stdout.flush()?;
             return Ok(());
-        } else {
-            game_state.paused = false;
         }
 
-        if self.wsize_updated || game_state.paused {
+        if self.wsize_updated {
             self.wsize_updated = false;
 
             self.render_borders()?;
@@ -41,7 +38,12 @@ impl Render {
 
         if game_state.score_updated {
             game_state.score_updated = false;
+            self.draw_menu_items(game_state.score, false)?;
+        }
+
+        if game_state.paused {
             self.draw_menu_items(game_state.score, game_state.paused)?;
+            return Ok(());
         }
 
         for (_id, (pos, prev_pos, renderable)) in
