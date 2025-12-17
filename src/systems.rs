@@ -1,6 +1,6 @@
 use crate::{
-    Direction, GameState, Player, PlayerProjectile, Position, PrevPosition, Render, Renderable,
-    Velocity,
+    Direction, Enemy, EnemyProjectile, GameState, Player, PlayerProjectile, Position, PrevPosition,
+    Render, Renderable, Velocity,
 };
 use crossterm::terminal;
 use hecs::Entity;
@@ -8,6 +8,9 @@ use hecs::World;
 use std::error::Error;
 use std::io::stdout;
 use std::time::Duration;
+
+pub const SCREEN_WIDTH: u16 = 120;
+pub const SCREEN_HEIGHT: u16 = 40;
 
 pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
     let mut world = World::new();
@@ -24,6 +27,20 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         Renderable {
             sprite_top: "⣆⡜⣛⢣⣠",
             sprite_bottom: "⣿⣿⣿⣿⣿",
+            width: 5,
+            destroy: false,
+            erased: false,
+        },
+    ));
+
+    // TODO: Spawn enemies
+    world.spawn((
+        Enemy,
+        Position { x: 2, y: 38 },
+        PrevPosition { x: 2, y: 38 },
+        Renderable {
+            sprite_top: "⢳⡴⠶⢦⡞",
+            sprite_bottom: "⠞⠫⡪⠋⠱",
             width: 5,
             destroy: false,
             erased: false,

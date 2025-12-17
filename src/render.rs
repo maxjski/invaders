@@ -11,10 +11,7 @@ use crossterm::{
     terminal::{self, Clear, ClearType},
 };
 
-use crate::{Position, PrevPosition, Renderable};
-
-const SCREEN_WIDTH: u16 = 120;
-const SCREEN_HEIGHT: u16 = 40;
+use crate::{Position, PrevPosition, Renderable, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub struct Render {
     pub wsize_updated: bool,
