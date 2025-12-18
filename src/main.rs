@@ -20,7 +20,6 @@ use crate::systems::*;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Networking
-    let listener = TcpListener::bind("127.0.0.1:2347").await?;
 
     let (tx, rx) = mpsc::channel();
 
@@ -74,6 +73,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
         if tick_pending {
             if game_state.main_menu.in_menu {
                 renderer.render_main_menu(&game_state)?;
+                continue;
+            }
+
+            if game_state.main_menu.hosting {
+                let listener = TcpListener::bind("127.0.0.1:2347").await?;
+
+                match listener.accept().await {
+                    Ok(_) => continue;
+                    Err(_) => break;
+                }
+
                 continue;
             }
 

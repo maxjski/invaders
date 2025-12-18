@@ -43,4 +43,6 @@ pub enum MenuItem {
 pub struct MainMenu {
     pub in_menu: bool,
     pub active_menu_item: MenuItem,
+
+    pub hosting: bool,
 }
