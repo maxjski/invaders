@@ -24,10 +24,22 @@ pub struct GameState {
     pub restart_notifier: bool,
 
     pub player_input_handler: PlayerInputHandler,
+    pub main_menu: MainMenu,
 }
 
 pub struct PlayerInputHandler {
     pub player_shoot: bool,
     pub move_player_left: bool,
     pub move_player_right: bool,
+}
+
+pub enum MenuItem {
+    HostGame,
+    JoinGame,
+    PlaySolo,
+}
+
+pub struct MainMenu {
+    pub in_menu: bool,
+    pub active_menu_item: MenuItem,
 }

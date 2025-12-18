@@ -1,6 +1,6 @@
 use crate::{
-    Direction, Enemy, EnemyProjectile, GameState, Player, PlayerInputHandler, PlayerProjectile,
-    Position, PrevPosition, ProjectileSpawner, Render, Renderable, Velocity,
+    Direction, Enemy, EnemyProjectile, GameState, MainMenu, MenuItem, Player, PlayerInputHandler,
+    PlayerProjectile, Position, PrevPosition, ProjectileSpawner, Render, Renderable, Velocity,
 };
 use crossterm::terminal;
 use hecs::Entity;
@@ -55,6 +55,10 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             player_shoot: false,
             move_player_right: false,
             move_player_left: false,
+        },
+        main_menu: MainMenu {
+            in_menu: true,
+            active_menu_item: MenuItem::HostGame,
         },
     };
 
@@ -117,6 +121,10 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             player_shoot: false,
             move_player_right: false,
             move_player_left: false,
+        },
+        main_menu: MainMenu {
+            in_menu: false,
+            active_menu_item: MenuItem::PlaySolo,
         },
     };
     spawn_enemies(

@@ -9,7 +9,9 @@ use crossterm::{
     terminal::{self, Clear, ClearType},
 };
 
-use crate::{GameState, Position, PrevPosition, Renderable, SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::{
+    GameState, MainMenu, MenuItem, Position, PrevPosition, Renderable, SCREEN_HEIGHT, SCREEN_WIDTH,
+};
 
 pub struct Render {
     pub wsize_updated: bool,
@@ -25,7 +27,6 @@ impl Render {
             queue!(self.stdout, Clear(ClearType::All))?;
             queue!(self.stdout, cursor::MoveTo(0, 0))?;
             write!(self.stdout, "Terminal too small")?;
-            self.stdout.flush()?;
             return Ok(());
         }
 
@@ -69,6 +70,46 @@ impl Render {
             self.draw_entity(left, bottom, pos, prev_pos, renderable)?;
             if renderable.destroy {
                 renderable.erased = true;
+            }
+        }
+
+        self.stdout.flush()?;
+
+        Ok(())
+    }
+
+    pub fn render_main_menu(&mut self, game_state: &GameState) -> Result<(), Box<dyn Error>> {
+        let (left, _, _, bottom) = self.get_game_bounds();
+
+        if self.wsize.rows < SCREEN_HEIGHT + 5 || self.wsize.columns < SCREEN_WIDTH + 5 {
+            queue!(self.stdout, Clear(ClearType::All))?;
+            queue!(self.stdout, cursor::MoveTo(0, 0))?;
+            write!(self.stdout, "Terminal too small")?;
+            return Ok(());
+        }
+
+        if self.wsize_updated {
+            self.wsize_updated = false;
+
+            self.render_borders()?;
+            self.draw_menu_items(
+                game_state.score,
+                game_state.high_score,
+                game_state.player_lives,
+                game_state.paused,
+            )?;
+        }
+
+        queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
+        match game_state.main_menu.active_menu_item {
+            MenuItem::HostGame => {
+                write!(self.stdout, " > HostGame   |   JoinGame   |   PlaySolo   ")?;
+            }
+            MenuItem::JoinGame => {
+                write!(self.stdout, "   HostGame   | > JoinGame   |   PlaySolo   ")?;
+            }
+            MenuItem::PlaySolo => {
+                write!(self.stdout, "   HostGame   |   JoinGame   | > PlaySolo   ")?;
             }
         }
 
@@ -144,7 +185,6 @@ impl Render {
                 " GAME OVER | NEW HIGHSCORE: {} | r - restart | q - quit ",
                 score
             )?;
-            self.stdout.flush()?;
         } else {
             queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
             write!(
@@ -152,8 +192,8 @@ impl Render {
                 " GAME OVER | SCORE: {} | r - restart | q - quit ",
                 score
             )?;
-            self.stdout.flush()?;
         }
+        self.stdout.flush()?;
 
         Ok(())
     }

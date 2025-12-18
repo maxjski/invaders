@@ -4,6 +4,8 @@ use std::time::{Duration, Instant};
 
 use crossterm::{ExecutableCommand, cursor, event::PopKeyboardEnhancementFlags, terminal};
 
+use tokio::net::TcpListener;
+
 mod components;
 mod events;
 mod render;
@@ -15,7 +17,11 @@ use crate::render::*;
 use crate::state::*;
 use crate::systems::*;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    // Networking
+    let listener = TcpListener::bind("127.0.0.1:2347").await?;
+
     let (tx, rx) = mpsc::channel();
 
     spawn_coordination_threads(tx);
@@ -24,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let kb_enhanced = renderer.terminal_raw_mode()?;
 
-    if let Err(e) = renderer.render(&mut game_state) {
+    if let Err(e) = renderer.render_main_menu(&game_state) {
         // We drop errors to keep and return the game_state.render() error instead
         if kb_enhanced {
             let _ = renderer.stdout.execute(PopKeyboardEnhancementFlags);
@@ -66,6 +72,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if tick_pending {
+            if game_state.main_menu.in_menu {
+                renderer.render_main_menu(&game_state)?;
+                continue;
+            }
+
             if game_state.restart_notifier {
                 (game_state, renderer) = restart_world(game_state.high_score)?;
                 game_state.restart_notifier = false;
