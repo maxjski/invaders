@@ -33,16 +33,31 @@ impl Render {
             self.wsize_updated = false;
 
             self.render_borders()?;
-            self.draw_menu_items(game_state.score, game_state.high_score, game_state.paused)?;
+            self.draw_menu_items(
+                game_state.score,
+                game_state.high_score,
+                game_state.player_lives,
+                game_state.paused,
+            )?;
         }
 
         if game_state.score_updated {
             game_state.score_updated = false;
-            self.draw_menu_items(game_state.score, game_state.high_score, false)?;
+            self.draw_menu_items(
+                game_state.score,
+                game_state.high_score,
+                game_state.player_lives,
+                false,
+            )?;
         }
 
         if game_state.paused {
-            self.draw_menu_items(game_state.score, game_state.high_score, game_state.paused)?;
+            self.draw_menu_items(
+                game_state.score,
+                game_state.high_score,
+                game_state.player_lives,
+                game_state.paused,
+            )?;
             return Ok(());
         }
 
@@ -62,10 +77,11 @@ impl Render {
         Ok(())
     }
 
-    fn draw_menu_items(
+    pub fn draw_menu_items(
         &mut self,
         score: i32,
         high_score: i32,
+        player_lives: u16,
         paused: bool,
     ) -> Result<(), Box<dyn Error>> {
         let (left, _, _, bottom) = self.get_game_bounds();
@@ -84,8 +100,19 @@ impl Render {
         queue!(self.stdout, cursor::MoveTo(left + 50, bottom - 2))?;
         write!(self.stdout, "score - {}", score)?;
 
-        queue!(self.stdout, cursor::MoveTo(left + 80, bottom - 2))?;
+        queue!(self.stdout, cursor::MoveTo(left + 70, bottom - 2))?;
         write!(self.stdout, "HIGHSCORE - {}", high_score)?;
+
+        queue!(self.stdout, cursor::MoveTo(left + 90, bottom - 2))?;
+        write!(self.stdout, "                     ")?;
+
+        queue!(self.stdout, cursor::MoveTo(left + 90, bottom - 2))?;
+        write!(
+            self.stdout,
+            "Lives - {}",
+            "()".repeat(player_lives as usize)
+        )?;
+
         Ok(())
     }
 

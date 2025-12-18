@@ -89,6 +89,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                     renderer.erase_game_over()?;
                 } else {
                     game_state.game_over = true;
+                    renderer.draw_menu_items(
+                        game_state.score,
+                        game_state.high_score,
+                        game_state.player_lives,
+                        false,
+                    )?;
                     renderer.draw_game_over(game_state.score, game_state.high_score)?;
 
                     if game_state.score > game_state.high_score {

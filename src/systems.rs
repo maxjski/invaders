@@ -38,6 +38,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
     // Each frame is a list of lines
     let game_state = GameState {
         world,
+        player_lives: 3,
         player_entity,
         player_projectile_exists: false,
         enemy_direction: Direction::Right,
@@ -90,6 +91,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
     // Each frame is a list of lines
     let game_state = GameState {
         world,
+        player_lives: 3,
         player_entity,
         player_projectile_exists: false,
         enemy_direction: Direction::Right,
@@ -142,8 +144,8 @@ fn spawn_enemies(speed_multiplier: f32, world: &mut World) {
                     direction: Direction::None, // Enemy directon is stored in game state
                 },
                 ProjectileSpawner {
-                    probability: 1.0,
-                    projectile_speed: 20.0,
+                    probability: 0.1 * speed_multiplier as f64,
+                    projectile_speed: -20.0,
                 },
             ));
         }
@@ -159,6 +161,9 @@ pub fn process_tick(
 
     process_enemies(delta_time, game_state);
     enemy_collision_detection(game_state);
+
+    process_enemy_projectiles(delta_time, game_state)?;
+    player_collision_detection(game_state);
 
     entity_cleanup(&mut game_state.world)?;
 
@@ -274,7 +279,7 @@ fn process_enemies(delta_time: Duration, game_state: &mut GameState) {
             projectiles_to_spawn.push((
                 Position {
                     x: pos.x + 2,
-                    y: pos.y,
+                    y: pos.y - 1,
                 },
                 Velocity {
                     move_accumulator: 0.0,
@@ -390,7 +395,7 @@ fn process_enemy_projectiles(
             let old_pos = pos.y;
             prev_pos.y = old_pos;
 
-            if new_pos < 2 || new_pos > 39 {
+            if new_pos < 6 || new_pos > 39 {
                 renderable.destroy = true;
             } else {
                 pos.y = new_pos as u16;
@@ -402,7 +407,6 @@ fn process_enemy_projectiles(
 
     for proj in projectiles_to_erase {
         game_state.world.despawn(proj)?;
-        game_state.player_projectile_exists = false;
     }
 
     Ok(())
@@ -475,6 +479,42 @@ fn enemy_collision_detection(game_state: &mut GameState) {
     for entity_id in entities_hit {
         if let Ok(mut renderable) = game_state.world.get::<&mut Renderable>(entity_id) {
             renderable.destroy = true;
+        }
+    }
+}
+
+fn player_collision_detection(game_state: &mut GameState) {
+    let mut player_hit = false;
+
+    let player_data = game_state
+        .world
+        .query::<&Position>()
+        .with::<&Player>()
+        .iter()
+        .map(|(id, pos)| (id, *pos))
+        .next();
+
+    if let Some((_, player_pos)) = player_data {
+        for (_, (proj_pos, renderable)) in game_state
+            .world
+            .query_mut::<(&Position, &mut Renderable)>()
+            .with::<&EnemyProjectile>()
+        {
+            if proj_pos.x >= player_pos.x
+                && proj_pos.x <= player_pos.x + 5
+                && player_pos.y == proj_pos.y - 1
+            {
+                player_hit = true;
+                renderable.destroy = true;
+            }
+        }
+    }
+
+    if player_hit {
+        game_state.player_lives -= 1;
+        game_state.score_updated = true;
+        if game_state.player_lives == 0 {
+            game_state.game_over_notifier = true;
         }
     }
 }
