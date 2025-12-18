@@ -30,7 +30,8 @@ impl Render {
             return Ok(());
         }
 
-        if self.wsize_updated {
+        if self.wsize_updated || game_state.request_clear_render {
+            game_state.request_clear_render = false;
             self.wsize_updated = false;
 
             self.render_borders()?;

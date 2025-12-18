@@ -1,4 +1,4 @@
-use crate::{Direction, GameState, Player, Render, Velocity};
+use crate::{Direction, GameState, MainMenu, MenuItem, Player, Render, Velocity};
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
@@ -33,6 +33,23 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::PlayerShoot => {
+            // Handle while In Menu
+            if game_state.main_menu.in_menu {
+                match game_state.main_menu.active_menu_item {
+                    MenuItem::HostGame => {
+                        game_state.main_menu.active_menu_item = MenuItem::HostGame;
+                    }
+                    MenuItem::JoinGame => {
+                        game_state.main_menu.active_menu_item = MenuItem::JoinGame;
+                    }
+                    MenuItem::PlaySolo => {
+                        game_state.main_menu.in_menu = false;
+                        game_state.request_clear_render = true;
+                    }
+                }
+                return false;
+            }
+
             game_state.player_input_handler.player_shoot = true;
             false
         }
@@ -41,6 +58,22 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::MovePlayerLeft => {
+            // Handle when in menu
+            if game_state.main_menu.in_menu {
+                match game_state.main_menu.active_menu_item {
+                    MenuItem::HostGame => {
+                        game_state.main_menu.active_menu_item = MenuItem::PlaySolo;
+                    }
+                    MenuItem::JoinGame => {
+                        game_state.main_menu.active_menu_item = MenuItem::HostGame;
+                    }
+                    MenuItem::PlaySolo => {
+                        game_state.main_menu.active_menu_item = MenuItem::JoinGame;
+                    }
+                }
+                return false;
+            }
+
             game_state.player_input_handler.move_player_left = true;
 
             // TODO: Replace with direct access with Player entity stored in game_state
@@ -69,6 +102,22 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::MovePlayerRight => {
+            // Handle when in menu
+            if game_state.main_menu.in_menu {
+                match game_state.main_menu.active_menu_item {
+                    MenuItem::HostGame => {
+                        game_state.main_menu.active_menu_item = MenuItem::JoinGame;
+                    }
+                    MenuItem::JoinGame => {
+                        game_state.main_menu.active_menu_item = MenuItem::PlaySolo;
+                    }
+                    MenuItem::PlaySolo => {
+                        game_state.main_menu.active_menu_item = MenuItem::HostGame;
+                    }
+                }
+                return false;
+            }
+
             game_state.player_input_handler.move_player_right = true;
 
             for (_, vel) in game_state

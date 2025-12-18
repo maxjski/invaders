@@ -25,6 +25,7 @@ pub struct GameState {
 
     pub player_input_handler: PlayerInputHandler,
     pub main_menu: MainMenu,
+    pub request_clear_render: bool,
 }
 
 pub struct PlayerInputHandler {
