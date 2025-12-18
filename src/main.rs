@@ -107,7 +107,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             // Clamp dt to reduce perceived speed changes when we fall behind
             dt = dt.min(max_dt);
 
-            movement_system(dt.max(fixed_dt).min(max_dt), &mut game_state)?;
+            process_tick(dt.max(fixed_dt).min(max_dt), &mut game_state)?;
 
             match renderer.render(&mut game_state) {
                 Ok(_) => continue,

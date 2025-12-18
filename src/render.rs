@@ -78,11 +78,13 @@ impl Render {
         } else {
             write!(self.stdout, "p - pause")?;
         }
-
         queue!(self.stdout, cursor::MoveTo(left + 28, bottom - 2))?;
-        write!(self.stdout, "score - {}", score)?;
+        write!(self.stdout, "r - restart")?;
 
         queue!(self.stdout, cursor::MoveTo(left + 50, bottom - 2))?;
+        write!(self.stdout, "score - {}", score)?;
+
+        queue!(self.stdout, cursor::MoveTo(left + 80, bottom - 2))?;
         write!(self.stdout, "HIGHSCORE - {}", high_score)?;
         Ok(())
     }

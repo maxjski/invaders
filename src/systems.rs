@@ -1,6 +1,6 @@
 use crate::{
-    Direction, Enemy, GameState, Player, PlayerProjectile, Position, PrevPosition, Render,
-    Renderable, Velocity,
+    Direction, Enemy, EnemyProjectile, GameState, Player, PlayerProjectile, Position, PrevPosition,
+    ProjectileSpawner, Render, Renderable, Velocity,
 };
 use crossterm::terminal;
 use hecs::Entity;
@@ -141,56 +141,37 @@ fn spawn_enemies(speed_multiplier: f32, world: &mut World) {
                     move_accumulator: 0.0,
                     direction: Direction::None, // Enemy directon is stored in game state
                 },
+                ProjectileSpawner {
+                    probability: 1.0,
+                    projectile_speed: 20.0,
+                },
             ));
         }
     }
 }
 
-pub fn movement_system(
+pub fn process_tick(
     delta_time: Duration,
     game_state: &mut GameState,
 ) -> Result<(), Box<dyn Error>> {
-    let world = &mut game_state.world;
-    // Move Player
-    for (_id, (pos, prev_pos, vel)) in world
-        .query_mut::<(&mut Position, &mut PrevPosition, &mut Velocity)>()
-        .with::<&Player>()
-    {
-        match vel.direction {
-            Direction::Right => {
-                vel.move_accumulator += vel.speed * delta_time.as_secs_f32();
-            }
-            Direction::Left => {
-                vel.move_accumulator -= vel.speed * delta_time.as_secs_f32();
-            }
-            Direction::None => {
-                vel.move_accumulator = 0.0;
-            }
-        }
+    move_player(delta_time, &mut game_state.world);
+    process_player_projectile(delta_time, game_state)?;
 
-        if vel.move_accumulator >= 1.0 || vel.move_accumulator <= -1.0 {
-            // Move in whole-cell steps, keep fractional remainder to avoid drift and asymmetry
-            let steps = vel.move_accumulator.trunc();
-            let new_pos = pos.x as i32 + steps as i32;
+    process_enemies(delta_time, game_state);
+    enemy_collision_detection(game_state);
 
-            let old_pos = pos.x;
-            prev_pos.x = old_pos;
+    entity_cleanup(&mut game_state.world)?;
 
-            if new_pos < 2 {
-                pos.x = 2;
-            } else if new_pos > 113 {
-                pos.x = 113;
-            } else {
-                pos.x = new_pos as u16;
-            }
+    Ok(())
+}
 
-            vel.move_accumulator -= steps;
-        }
-    }
-
-    // Queued for destruction if exists
+fn process_player_projectile(
+    delta_time: Duration,
+    game_state: &mut GameState,
+) -> Result<(), Box<dyn Error>> {
     let mut player_projectile: Option<Entity> = Option::None;
-    for (id, (pos, prev_pos, vel, renderable)) in world
+    for (id, (pos, prev_pos, vel, renderable)) in game_state
+        .world
         .query_mut::<(
             &mut Position,
             &mut PrevPosition,
@@ -228,16 +209,81 @@ pub fn movement_system(
 
     // If player projectile is assigned, we need to destory it
     if let Some(player_projectile) = player_projectile {
-        world.despawn(player_projectile)?;
+        game_state.world.despawn(player_projectile)?;
         game_state.player_projectile_exists = false;
     }
 
-    // move enemies
-    let mut enemies_hit_wall = false;
+    Ok(())
+}
+
+fn move_player(delta_time: Duration, world: &mut World) {
     for (_id, (pos, prev_pos, vel)) in world
         .query_mut::<(&mut Position, &mut PrevPosition, &mut Velocity)>()
+        .with::<&Player>()
+    {
+        match vel.direction {
+            Direction::Right => {
+                vel.move_accumulator += vel.speed * delta_time.as_secs_f32();
+            }
+            Direction::Left => {
+                vel.move_accumulator -= vel.speed * delta_time.as_secs_f32();
+            }
+            Direction::None => {
+                vel.move_accumulator = 0.0;
+            }
+        }
+
+        if vel.move_accumulator >= 1.0 || vel.move_accumulator <= -1.0 {
+            // Move in whole-cell steps, keep fractional remainder to avoid drift and asymmetry
+            let steps = vel.move_accumulator.trunc();
+            let new_pos = pos.x as i32 + steps as i32;
+
+            let old_pos = pos.x;
+            prev_pos.x = old_pos;
+
+            if new_pos < 2 {
+                pos.x = 2;
+            } else if new_pos > 113 {
+                pos.x = 113;
+            } else {
+                pos.x = new_pos as u16;
+            }
+
+            vel.move_accumulator -= steps;
+        }
+    }
+}
+
+fn process_enemies(delta_time: Duration, game_state: &mut GameState) {
+    let mut enemies_hit_wall = false;
+    let mut projectiles_to_spawn: Vec<(Position, Velocity)> = Vec::new();
+
+    for (_id, (pos, prev_pos, vel, proj_spawn)) in game_state
+        .world
+        .query_mut::<(
+            &mut Position,
+            &mut PrevPosition,
+            &mut Velocity,
+            &ProjectileSpawner,
+        )>()
         .with::<&Enemy>()
     {
+        let chance = rand::random::<f64>() * 100.0;
+
+        if proj_spawn.probability > chance {
+            projectiles_to_spawn.push((
+                Position {
+                    x: pos.x + 2,
+                    y: pos.y,
+                },
+                Velocity {
+                    move_accumulator: 0.0,
+                    speed: proj_spawn.projectile_speed,
+                    direction: Direction::None,
+                },
+            ))
+        }
+
         match game_state.enemy_direction {
             Direction::Right => {
                 vel.move_accumulator += vel.speed * delta_time.as_secs_f32();
@@ -273,6 +319,15 @@ pub fn movement_system(
         }
     }
 
+    for (pos, vel) in projectiles_to_spawn {
+        game_state.world.spawn((
+            EnemyProjectile,
+            pos,
+            vel,
+            PrevPosition { x: pos.x, y: pos.y },
+        ));
+    }
+
     // Switch enemy direction when wall is hit
     if enemies_hit_wall {
         match game_state.enemy_direction {
@@ -281,7 +336,8 @@ pub fn movement_system(
             Direction::None => game_state.enemy_direction = Direction::None,
         }
 
-        for (_id, (pos, prev_pos)) in world
+        for (_id, (pos, prev_pos)) in game_state
+            .world
             .query_mut::<(&mut Position, &mut PrevPosition)>()
             .with::<&Enemy>()
         {
@@ -294,11 +350,6 @@ pub fn movement_system(
             }
         }
     }
-
-    enemy_collision_detection(game_state);
-    entity_cleanup(&mut game_state.world)?;
-
-    Ok(())
 }
 
 fn entity_cleanup(world: &mut World) -> Result<(), Box<dyn Error>> {

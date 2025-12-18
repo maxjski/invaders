@@ -29,6 +29,11 @@ pub struct Renderable {
     pub erased: bool,
 }
 
+pub struct ProjectileSpawner {
+    pub probability: f64,
+    pub projectile_speed: f32,
+}
+
 pub struct Player;
 
 pub struct PlayerProjectile;
