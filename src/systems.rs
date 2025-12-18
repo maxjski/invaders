@@ -43,10 +43,66 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         enemy_direction: Direction::Right,
         score_updated: true,
         score: 0,
+        high_score: 0,
         enemy_speed_multiplier: 1.0,
         enemy_amount: 30,
         game_over: false,
+        game_over_notifier: false,
         paused: false,
+        pause_notifier: false,
+        restart_notifier: false,
+    };
+
+    let stdout = stdout();
+
+    let renderer = Render {
+        stdout,
+        wsize: terminal::window_size()?,
+        wsize_updated: true,
+    };
+
+    Ok((game_state, renderer))
+}
+
+pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Error>> {
+    let mut world = World::new();
+
+    let player_entity = world.spawn((
+        Player,
+        Position { x: 55, y: 7 },
+        PrevPosition { x: 55, y: 7 },
+        Velocity {
+            speed: 60.0,
+            move_accumulator: 0.0,
+            direction: Direction::None,
+        },
+        Renderable {
+            sprite_top: "⣆⡜⣛⢣⣠",
+            sprite_bottom: "⣿⣿⣿⣿⣿",
+            width: 5,
+            destroy: false,
+            erased: false,
+        },
+    ));
+
+    spawn_enemies(1.0, &mut world);
+
+    // Each frame is a list of lines
+    let game_state = GameState {
+        world,
+        player_entity,
+        player_projectile_exists: false,
+        enemy_direction: Direction::Right,
+        score_updated: true,
+        score: 0,
+        high_score,
+        enemy_speed_multiplier: 1.0,
+        enemy_amount: 30,
+        game_over: false,
+        game_over_notifier: false,
+        paused: false,
+        pause_notifier: false,
+        restart_notifier: false,
     };
 
     let stdout = stdout();
@@ -81,7 +137,7 @@ fn spawn_enemies(speed_multiplier: f32, world: &mut World) {
                     erased: false,
                 },
                 Velocity {
-                    speed: 20.0 * speed_multiplier,
+                    speed: 200.0 * speed_multiplier,
                     move_accumulator: 0.0,
                     direction: Direction::None, // Enemy directon is stored in game state
                 },
@@ -234,7 +290,7 @@ pub fn movement_system(
             pos.y = old_pos - 1;
             if pos.y <= 10 {
                 // Enemies flew too low
-                game_state.game_over = true;
+                game_state.game_over_notifier = true;
             }
         }
     }
@@ -268,7 +324,7 @@ fn entity_cleanup(world: &mut World) -> Result<(), Box<dyn Error>> {
 // Collides::DestroySelf etc
 fn enemy_collision_detection(game_state: &mut GameState) {
     let mut entities_hit: Vec<Entity> = Vec::new();
-    let mut need_enemies = false;
+    let mut need_new_enemies = false;
 
     {
         let projectile_data = game_state
@@ -296,7 +352,7 @@ fn enemy_collision_detection(game_state: &mut GameState) {
                     if game_state.enemy_amount == 1 {
                         game_state.enemy_speed_multiplier *= 1.5;
                         game_state.enemy_amount = 30;
-                        need_enemies = true;
+                        need_new_enemies = true;
                     } else {
                         game_state.enemy_amount -= 1;
                     }
@@ -305,7 +361,7 @@ fn enemy_collision_detection(game_state: &mut GameState) {
         }
     }
 
-    if need_enemies {
+    if need_new_enemies {
         spawn_enemies(game_state.enemy_speed_multiplier, &mut game_state.world);
     }
 

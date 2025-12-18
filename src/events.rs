@@ -20,6 +20,7 @@ pub enum GameEvent {
     MovePlayerStop,
     PlayerShoot,
     Pause,
+    Restart,
 }
 
 pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut GameState) -> bool {
@@ -101,7 +102,13 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::Pause => {
-            game_state.paused = !game_state.paused;
+            if !game_state.game_over {
+                game_state.pause_notifier = true;
+            }
+            false
+        }
+        GameEvent::Restart => {
+            game_state.restart_notifier = true;
             false
         }
         GameEvent::Tick => true,
@@ -156,6 +163,11 @@ pub fn spawn_coordination_threads(tx: Sender<GameEvent>) {
                             }
                         } else if key_event.code == KeyCode::Char('p') && key_event.is_press() {
                             match tx.send(GameEvent::Pause) {
+                                Ok(_) => continue,
+                                Err(_) => break,
+                            }
+                        } else if key_event.code == KeyCode::Char('r') && key_event.is_press() {
+                            match tx.send(GameEvent::Restart) {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }

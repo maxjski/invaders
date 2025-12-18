@@ -33,16 +33,16 @@ impl Render {
             self.wsize_updated = false;
 
             self.render_borders()?;
-            self.draw_menu_items(game_state.score, game_state.paused)?;
+            self.draw_menu_items(game_state.score, game_state.high_score, game_state.paused)?;
         }
 
         if game_state.score_updated {
             game_state.score_updated = false;
-            self.draw_menu_items(game_state.score, false)?;
+            self.draw_menu_items(game_state.score, game_state.high_score, false)?;
         }
 
         if game_state.paused {
-            self.draw_menu_items(game_state.score, game_state.paused)?;
+            self.draw_menu_items(game_state.score, game_state.high_score, game_state.paused)?;
             return Ok(());
         }
 
@@ -62,7 +62,12 @@ impl Render {
         Ok(())
     }
 
-    fn draw_menu_items(&mut self, score: i32, paused: bool) -> Result<(), Box<dyn Error>> {
+    fn draw_menu_items(
+        &mut self,
+        score: i32,
+        high_score: i32,
+        paused: bool,
+    ) -> Result<(), Box<dyn Error>> {
         let (left, _, _, bottom) = self.get_game_bounds();
         queue!(self.stdout, cursor::MoveTo(left + 2, bottom - 2))?;
         write!(self.stdout, "q - exit")?;
@@ -76,6 +81,63 @@ impl Render {
 
         queue!(self.stdout, cursor::MoveTo(left + 28, bottom - 2))?;
         write!(self.stdout, "score - {}", score)?;
+
+        queue!(self.stdout, cursor::MoveTo(left + 50, bottom - 2))?;
+        write!(self.stdout, "HIGHSCORE - {}", high_score)?;
+        Ok(())
+    }
+
+    pub fn draw_pause(&mut self) -> Result<(), Box<dyn Error>> {
+        let (left, _, _, bottom) = self.get_game_bounds();
+        queue!(self.stdout, cursor::MoveTo(left + 45, bottom - 20))?;
+        write!(self.stdout, "|  PAUSE (p to unpause)  |")?;
+        self.stdout.flush()?;
+
+        Ok(())
+    }
+
+    pub fn erase_pause(&mut self) -> Result<(), Box<dyn Error>> {
+        let (left, _, _, bottom) = self.get_game_bounds();
+        queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
+        write!(self.stdout, "                          ")?;
+        self.stdout.flush()?;
+
+        Ok(())
+    }
+
+    pub fn draw_game_over(&mut self, score: i32, high_score: i32) -> Result<(), Box<dyn Error>> {
+        let (left, _, _, bottom) = self.get_game_bounds();
+
+        if score > high_score {
+            queue!(self.stdout, cursor::MoveTo(left + 30, bottom - 20))?;
+            write!(
+                self.stdout,
+                " GAME OVER | NEW HIGHSCORE: {} | r - restart | q - quit ",
+                score
+            )?;
+            self.stdout.flush()?;
+        } else {
+            queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
+            write!(
+                self.stdout,
+                " GAME OVER | SCORE: {} | r - restart | q - quit ",
+                score
+            )?;
+            self.stdout.flush()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn erase_game_over(&mut self) -> Result<(), Box<dyn Error>> {
+        let (left, _, _, bottom) = self.get_game_bounds();
+        queue!(self.stdout, cursor::MoveTo(left + 30, bottom - 20))?;
+
+        write!(
+            self.stdout,
+            "                                                             "
+        )?;
+        self.stdout.flush()?;
 
         Ok(())
     }

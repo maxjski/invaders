@@ -66,10 +66,38 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if tick_pending {
-            if game_state.paused {
-                renderer.render(&mut game_state)?;
+            if game_state.restart_notifier {
+                (game_state, renderer) = restart_world(game_state.high_score)?;
+                game_state.restart_notifier = false;
                 continue;
-            } else if game_state.game_over {
+            }
+
+            if game_state.pause_notifier {
+                // renderer.render(&mut game_state)?;
+                if game_state.paused {
+                    game_state.paused = false;
+                    renderer.erase_pause()?;
+                } else {
+                    game_state.paused = true;
+                    renderer.draw_pause()?;
+                }
+                game_state.pause_notifier = false;
+            }
+            if game_state.game_over_notifier {
+                if game_state.game_over {
+                    game_state.game_over = false;
+                    renderer.erase_game_over()?;
+                } else {
+                    game_state.game_over = true;
+                    renderer.draw_game_over(game_state.score, game_state.high_score)?;
+
+                    if game_state.score > game_state.high_score {
+                        game_state.high_score = game_state.score;
+                    }
+                }
+                game_state.game_over_notifier = false;
+            }
+            if game_state.game_over || game_state.paused {
                 continue;
             }
 

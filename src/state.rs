@@ -8,8 +8,15 @@ pub struct GameState {
     pub enemy_direction: Direction,
     pub score_updated: bool,
     pub score: i32,
+    pub high_score: i32,
+
     pub enemy_speed_multiplier: f32,
     pub enemy_amount: u16,
+
     pub game_over: bool,
+    pub game_over_notifier: bool,
     pub paused: bool,
+    pub pause_notifier: bool,
+
+    pub restart_notifier: bool,
 }
