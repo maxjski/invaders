@@ -325,6 +325,13 @@ fn process_enemies(delta_time: Duration, game_state: &mut GameState) {
             pos,
             vel,
             PrevPosition { x: pos.x, y: pos.y },
+            Renderable {
+                sprite_top: "",
+                sprite_bottom: "⣿",
+                width: 1,
+                destroy: false,
+                erased: false,
+            },
         ));
     }
 
@@ -350,6 +357,55 @@ fn process_enemies(delta_time: Duration, game_state: &mut GameState) {
             }
         }
     }
+}
+
+fn process_enemy_projectiles(
+    delta_time: Duration,
+    game_state: &mut GameState,
+) -> Result<(), Box<dyn Error>> {
+    let mut projectiles_to_erase: Vec<Entity> = Vec::new();
+
+    for (id, (pos, prev_pos, vel, renderable)) in game_state
+        .world
+        .query_mut::<(
+            &mut Position,
+            &mut PrevPosition,
+            &mut Velocity,
+            &mut Renderable,
+        )>()
+        .with::<&EnemyProjectile>()
+    {
+        // projectile sprite was destroyed by renderer
+        if renderable.erased {
+            projectiles_to_erase.push(id);
+        }
+
+        vel.move_accumulator += vel.speed * delta_time.as_secs_f32();
+
+        if vel.move_accumulator >= 1.0 || vel.move_accumulator <= -1.0 {
+            // Move in whole-cell steps, keep fractional remainder to avoid drift and asymmetry
+            let steps = vel.move_accumulator.trunc();
+            let new_pos = pos.y as i32 + steps as i32;
+
+            let old_pos = pos.y;
+            prev_pos.y = old_pos;
+
+            if new_pos < 2 || new_pos > 39 {
+                renderable.destroy = true;
+            } else {
+                pos.y = new_pos as u16;
+            }
+
+            vel.move_accumulator -= steps;
+        }
+    }
+
+    for proj in projectiles_to_erase {
+        game_state.world.despawn(proj)?;
+        game_state.player_projectile_exists = false;
+    }
+
+    Ok(())
 }
 
 fn entity_cleanup(world: &mut World) -> Result<(), Box<dyn Error>> {
