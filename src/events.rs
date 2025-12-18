@@ -16,9 +16,11 @@ pub enum GameEvent {
     Tick,
     Quit,
     MovePlayerLeft,
+    MovePlayerLeftEnd,
     MovePlayerRight,
-    MovePlayerStop,
+    MovePlayerRightEnd,
     PlayerShoot,
+    PlayerShootEnd,
     Pause,
     Restart,
 }
@@ -34,44 +36,53 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::PlayerShoot => {
-            if game_state.player_projectile_exists {
-                return false;
-            } else {
-                game_state.player_projectile_exists = true;
-            }
+            game_state.player_input_handler.player_shoot = true;
 
-            let mut pos: Option<u16> = Option::None;
-            if let Ok(position) = game_state
-                .world
-                .query_one_mut::<&Position>(game_state.player_entity)
-            {
-                pos = Option::Some(position.x);
-            }
-
-            if let Some(pos) = pos {
-                game_state.world.spawn((
-                    PlayerProjectile,
-                    // We add 2 to pos, as width of player is 5 and we want projectiles to spawn in
-                    // the middle
-                    Position { x: pos + 2, y: 8 },
-                    PrevPosition { x: pos + 2, y: 8 },
-                    Velocity {
-                        speed: 60.0,
-                        move_accumulator: 0.0,
-                        direction: Direction::None,
-                    },
-                    Renderable {
-                        sprite_top: "⣿",
-                        sprite_bottom: "",
-                        width: 1,
-                        destroy: false,
-                        erased: false,
-                    },
-                ));
-            }
+            // if game_state.player_projectile_exists {
+            //     return false;
+            // } else {
+            //     game_state.player_projectile_exists = true;
+            // }
+            //
+            // let mut pos: Option<u16> = Option::None;
+            // if let Ok(position) = game_state
+            //     .world
+            //     .query_one_mut::<&Position>(game_state.player_entity)
+            // {
+            //     pos = Option::Some(position.x);
+            // }
+            //
+            // if let Some(pos) = pos {
+            //     game_state.world.spawn((
+            //         PlayerProjectile,
+            //         // We add 2 to pos, as width of player is 5 and we want projectiles to spawn in
+            //         // the middle
+            //         Position { x: pos + 2, y: 8 },
+            //         PrevPosition { x: pos + 2, y: 8 },
+            //         Velocity {
+            //             speed: 60.0,
+            //             move_accumulator: 0.0,
+            //             direction: Direction::None,
+            //         },
+            //         Renderable {
+            //             sprite_top: "⣿",
+            //             sprite_bottom: "",
+            //             width: 1,
+            //             destroy: false,
+            //             erased: false,
+            //         },
+            //     ));
+            // }
+            false
+        }
+        GameEvent::PlayerShootEnd => {
+            game_state.player_input_handler.player_shoot = false;
             false
         }
         GameEvent::MovePlayerLeft => {
+            game_state.player_input_handler.move_player_left = true;
+
+            // TODO: Replace with direct access with Player entity stored in game_state
             for (_, vel) in game_state
                 .world
                 .query_mut::<&mut Velocity>()
@@ -81,7 +92,29 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             }
             false
         }
+        GameEvent::MovePlayerLeftEnd => {
+            game_state.player_input_handler.move_player_left = false;
+
+            // let vel = game_state
+            //     .world
+            //     .get::<&mut Velocity>(game_state.player_entity);
+
+            for (_, vel) in game_state
+                .world
+                .query_mut::<&mut Velocity>()
+                .with::<&Player>()
+            {
+                if game_state.player_input_handler.move_player_right {
+                    vel.direction = Direction::Right;
+                } else {
+                    vel.direction = Direction::None;
+                }
+            }
+            false
+        }
         GameEvent::MovePlayerRight => {
+            game_state.player_input_handler.move_player_right = true;
+
             for (_, vel) in game_state
                 .world
                 .query_mut::<&mut Velocity>()
@@ -91,13 +124,19 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             }
             false
         }
-        GameEvent::MovePlayerStop => {
+        GameEvent::MovePlayerRightEnd => {
+            game_state.player_input_handler.move_player_right = false;
+
             for (_, vel) in game_state
                 .world
                 .query_mut::<&mut Velocity>()
                 .with::<&Player>()
             {
-                vel.direction = Direction::None;
+                if game_state.player_input_handler.move_player_left {
+                    vel.direction = Direction::Left;
+                } else {
+                    vel.direction = Direction::None;
+                }
             }
             false
         }
@@ -148,16 +187,23 @@ pub fn spawn_coordination_threads(tx: Sender<GameEvent>) {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }
-                        } else if (key_event.code == KeyCode::Char('a')
-                            || key_event.code == KeyCode::Char('d'))
-                            && key_event.is_release()
-                        {
-                            match tx.send(GameEvent::MovePlayerStop) {
+                        } else if key_event.code == KeyCode::Char('a') && key_event.is_release() {
+                            match tx.send(GameEvent::MovePlayerLeftEnd) {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }
-                        } else if key_event.code == KeyCode::Char('w') {
+                        } else if key_event.code == KeyCode::Char('d') && key_event.is_release() {
+                            match tx.send(GameEvent::MovePlayerRightEnd) {
+                                Ok(_) => continue,
+                                Err(_) => break,
+                            }
+                        } else if key_event.code == KeyCode::Char('w') && key_event.is_press() {
                             match tx.send(GameEvent::PlayerShoot) {
+                                Ok(_) => continue,
+                                Err(_) => break,
+                            }
+                        } else if key_event.code == KeyCode::Char('w') && key_event.is_release() {
+                            match tx.send(GameEvent::PlayerShootEnd) {
                                 Ok(_) => continue,
                                 Err(_) => break,
                             }

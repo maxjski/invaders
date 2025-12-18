@@ -1,6 +1,6 @@
 use crate::{
-    Direction, Enemy, EnemyProjectile, GameState, Player, PlayerProjectile, Position, PrevPosition,
-    ProjectileSpawner, Render, Renderable, Velocity,
+    Direction, Enemy, EnemyProjectile, GameState, Player, PlayerInputHandler, PlayerProjectile,
+    Position, PrevPosition, ProjectileSpawner, Render, Renderable, Velocity,
 };
 use crossterm::terminal;
 use hecs::Entity;
@@ -46,12 +46,18 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         score: 0,
         high_score: 0,
         enemy_speed_multiplier: 1.0,
+        enemy_proj_prob_multiplier: 1.0,
         enemy_amount: 30,
         game_over: false,
         game_over_notifier: false,
         paused: false,
         pause_notifier: false,
         restart_notifier: false,
+        player_input_handler: PlayerInputHandler {
+            player_shoot: false,
+            move_player_right: false,
+            move_player_left: false,
+        },
     };
 
     let stdout = stdout();
@@ -99,12 +105,18 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
         score: 0,
         high_score,
         enemy_speed_multiplier: 1.0,
+        enemy_proj_prob_multiplier: 1.0,
         enemy_amount: 30,
         game_over: false,
         game_over_notifier: false,
         paused: false,
         pause_notifier: false,
         restart_notifier: false,
+        player_input_handler: PlayerInputHandler {
+            player_shoot: false,
+            move_player_right: false,
+            move_player_left: false,
+        },
     };
 
     let stdout = stdout();
@@ -170,10 +182,50 @@ pub fn process_tick(
     Ok(())
 }
 
+fn spawn_player_projectile(game_state: &mut GameState) {
+    if game_state.player_projectile_exists || !game_state.player_input_handler.player_shoot {
+        return;
+    } else {
+        game_state.player_projectile_exists = true;
+    }
+
+    let mut pos: Option<u16> = Option::None;
+    if let Ok(position) = game_state
+        .world
+        .query_one_mut::<&Position>(game_state.player_entity)
+    {
+        pos = Option::Some(position.x);
+    }
+
+    if let Some(pos) = pos {
+        game_state.world.spawn((
+            PlayerProjectile,
+            // We add 2 to pos, as width of player is 5 and we want projectiles to spawn in
+            // the middle
+            Position { x: pos + 2, y: 8 },
+            PrevPosition { x: pos + 2, y: 8 },
+            Velocity {
+                speed: 60.0,
+                move_accumulator: 0.0,
+                direction: Direction::None,
+            },
+            Renderable {
+                sprite_top: "⣿",
+                sprite_bottom: "",
+                width: 1,
+                destroy: false,
+                erased: false,
+            },
+        ));
+    }
+}
+
 fn process_player_projectile(
     delta_time: Duration,
     game_state: &mut GameState,
 ) -> Result<(), Box<dyn Error>> {
+    spawn_player_projectile(game_state);
+
     let mut player_projectile: Option<Entity> = Option::None;
     for (id, (pos, prev_pos, vel, renderable)) in game_state
         .world
@@ -461,7 +513,8 @@ fn enemy_collision_detection(game_state: &mut GameState) {
                     game_state.score += 10;
                     game_state.score_updated = true;
                     if game_state.enemy_amount == 1 {
-                        game_state.enemy_speed_multiplier *= 1.5;
+                        game_state.enemy_speed_multiplier *= 1.1;
+                        game_state.enemy_proj_prob_multiplier *= 2.0;
                         game_state.enemy_amount = 30;
                         need_new_enemies = true;
                     } else {

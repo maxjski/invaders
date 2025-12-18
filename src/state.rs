@@ -13,6 +13,7 @@ pub struct GameState {
     pub high_score: i32,
 
     pub enemy_speed_multiplier: f32,
+    pub enemy_proj_prob_multiplier: f32,
     pub enemy_amount: u16,
 
     pub game_over: bool,
@@ -21,4 +22,12 @@ pub struct GameState {
     pub pause_notifier: bool,
 
     pub restart_notifier: bool,
+
+    pub player_input_handler: PlayerInputHandler,
+}
+
+pub struct PlayerInputHandler {
+    pub player_shoot: bool,
+    pub move_player_left: bool,
+    pub move_player_right: bool,
 }
