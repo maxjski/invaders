@@ -137,7 +137,7 @@ fn spawn_enemies(speed_multiplier: f32, world: &mut World) {
                     erased: false,
                 },
                 Velocity {
-                    speed: 200.0 * speed_multiplier,
+                    speed: 20.0 * speed_multiplier,
                     move_accumulator: 0.0,
                     direction: Direction::None, // Enemy directon is stored in game state
                 },
