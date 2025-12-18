@@ -33,10 +33,8 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         },
     ));
 
-    spawn_enemies(1.0, &mut world);
-
     // Each frame is a list of lines
-    let game_state = GameState {
+    let mut game_state = GameState {
         world,
         player_lives: 3,
         player_entity,
@@ -60,6 +58,11 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         },
     };
 
+    spawn_enemies(
+        game_state.enemy_proj_prob_multiplier,
+        game_state.enemy_speed_multiplier,
+        &mut game_state.world,
+    );
     let stdout = stdout();
 
     let renderer = Render {
@@ -92,10 +95,8 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
         },
     ));
 
-    spawn_enemies(1.0, &mut world);
-
     // Each frame is a list of lines
-    let game_state = GameState {
+    let mut game_state = GameState {
         world,
         player_lives: 3,
         player_entity,
@@ -118,6 +119,11 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             move_player_left: false,
         },
     };
+    spawn_enemies(
+        game_state.enemy_proj_prob_multiplier,
+        game_state.enemy_speed_multiplier,
+        &mut game_state.world,
+    );
 
     let stdout = stdout();
 
@@ -130,7 +136,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
     Ok((game_state, renderer))
 }
 
-fn spawn_enemies(speed_multiplier: f32, world: &mut World) {
+fn spawn_enemies(proj_multiplier: f32, speed_multiplier: f32, world: &mut World) {
     for x in 0..10 {
         for y in 0..3 {
             world.spawn((
@@ -156,7 +162,7 @@ fn spawn_enemies(speed_multiplier: f32, world: &mut World) {
                     direction: Direction::None, // Enemy directon is stored in game state
                 },
                 ProjectileSpawner {
-                    probability: 0.1 * speed_multiplier as f64,
+                    probability: 0.1 * proj_multiplier as f64,
                     projectile_speed: -20.0,
                 },
             ));
@@ -513,8 +519,8 @@ fn enemy_collision_detection(game_state: &mut GameState) {
                     game_state.score += 10;
                     game_state.score_updated = true;
                     if game_state.enemy_amount == 1 {
-                        game_state.enemy_speed_multiplier *= 1.1;
-                        game_state.enemy_proj_prob_multiplier *= 2.0;
+                        game_state.enemy_speed_multiplier *= 1.2;
+                        game_state.enemy_proj_prob_multiplier *= 3.0;
                         game_state.enemy_amount = 30;
                         need_new_enemies = true;
                     } else {
@@ -526,7 +532,11 @@ fn enemy_collision_detection(game_state: &mut GameState) {
     }
 
     if need_new_enemies {
-        spawn_enemies(game_state.enemy_speed_multiplier, &mut game_state.world);
+        spawn_enemies(
+            game_state.enemy_proj_prob_multiplier,
+            game_state.enemy_speed_multiplier,
+            &mut game_state.world,
+        );
     }
 
     for entity_id in entities_hit {
