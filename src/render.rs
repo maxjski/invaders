@@ -127,7 +127,7 @@ impl Render {
 
     pub fn erase_pause(&mut self) -> Result<(), Box<dyn Error>> {
         let (left, _, _, bottom) = self.get_game_bounds();
-        queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
+        queue!(self.stdout, cursor::MoveTo(left + 45, bottom - 20))?;
         write!(self.stdout, "                          ")?;
         self.stdout.flush()?;
 
