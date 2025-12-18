@@ -1,7 +1,4 @@
-use crate::{
-    Direction, GameState, Player, PlayerProjectile, Position, PrevPosition, Render, Renderable,
-    Velocity,
-};
+use crate::{Direction, GameState, Player, Render, Velocity};
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
@@ -37,42 +34,6 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
         }
         GameEvent::PlayerShoot => {
             game_state.player_input_handler.player_shoot = true;
-
-            // if game_state.player_projectile_exists {
-            //     return false;
-            // } else {
-            //     game_state.player_projectile_exists = true;
-            // }
-            //
-            // let mut pos: Option<u16> = Option::None;
-            // if let Ok(position) = game_state
-            //     .world
-            //     .query_one_mut::<&Position>(game_state.player_entity)
-            // {
-            //     pos = Option::Some(position.x);
-            // }
-            //
-            // if let Some(pos) = pos {
-            //     game_state.world.spawn((
-            //         PlayerProjectile,
-            //         // We add 2 to pos, as width of player is 5 and we want projectiles to spawn in
-            //         // the middle
-            //         Position { x: pos + 2, y: 8 },
-            //         PrevPosition { x: pos + 2, y: 8 },
-            //         Velocity {
-            //             speed: 60.0,
-            //             move_accumulator: 0.0,
-            //             direction: Direction::None,
-            //         },
-            //         Renderable {
-            //             sprite_top: "⣿",
-            //             sprite_bottom: "",
-            //             width: 1,
-            //             destroy: false,
-            //             erased: false,
-            //         },
-            //     ));
-            // }
             false
         }
         GameEvent::PlayerShootEnd => {
@@ -95,14 +56,9 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
         GameEvent::MovePlayerLeftEnd => {
             game_state.player_input_handler.move_player_left = false;
 
-            // let vel = game_state
-            //     .world
-            //     .get::<&mut Velocity>(game_state.player_entity);
-
-            for (_, vel) in game_state
+            if let Ok(vel) = game_state
                 .world
-                .query_mut::<&mut Velocity>()
-                .with::<&Player>()
+                .query_one_mut::<&mut Velocity>(game_state.player_entity)
             {
                 if game_state.player_input_handler.move_player_right {
                     vel.direction = Direction::Right;
