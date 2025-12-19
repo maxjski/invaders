@@ -131,7 +131,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             move_player_left: false,
         },
         main_menu: MainMenu {
-            in_menu: true,
+            in_menu: false,
             active_menu_item: MenuItem::HostGame,
             hosting: false,
         },

@@ -188,7 +188,7 @@ pub fn spawn_coordination_threads(tx_main: &mpsc::UnboundedSender<GameEvent>) {
             match crossterm::event::read() {
                 Ok(event) => match event {
                     Event::Key(key_event) => {
-                        if key_event.code == KeyCode::Char('q') {
+                        if key_event.code == KeyCode::Char('q') && key_event.is_press() {
                             match tx.send(GameEvent::Quit) {
                                 Ok(_) => continue,
                                 Err(_) => break,

@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let kb_enhanced = renderer.terminal_raw_mode()?;
 
-    if let Err(e) = renderer.render_main_menu(&game_state) {
+    if let Err(e) = renderer.render_main_menu(&mut game_state) {
         // We drop errors to keep and return the game_state.render() error instead
         if kb_enhanced {
             let _ = renderer.stdout.execute(PopKeyboardEnhancementFlags);
@@ -48,7 +48,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Block until at least one event arrives
         let mut tick_pending = false;
         match rx.recv().await {
-            Some(GameEvent::Quit) => break,
+            Some(GameEvent::Quit) => {
+                if game_state.main_menu.in_menu {
+                    break;
+                } else {
+                    game_state.main_menu.in_menu = true;
+                    game_state.request_clear_render = true;
+                    game_state.restart_notifier = true;
+                }
+            }
             Some(event) => tick_pending |= handle_event(event, &mut renderer, &mut game_state),
             _ => break,
         };
@@ -71,9 +79,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         if tick_pending {
             if game_state.main_menu.in_menu {
                 if game_state.main_menu.hosting {
-                    renderer.render_host_menu(&game_state)?;
+                    renderer.render_host_menu(&mut game_state)?;
                 } else {
-                    renderer.render_main_menu(&game_state)?;
+                    renderer.render_main_menu(&mut game_state)?;
                 }
                 continue;
             }
@@ -95,7 +103,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             if game_state.restart_notifier {
                 (game_state, renderer) = restart_world(game_state.high_score)?;
-                game_state.restart_notifier = false;
                 continue;
             }
 

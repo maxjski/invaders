@@ -79,7 +79,7 @@ impl Render {
         Ok(())
     }
 
-    pub fn render_main_menu(&mut self, game_state: &GameState) -> Result<(), Box<dyn Error>> {
+    pub fn render_main_menu(&mut self, game_state: &mut GameState) -> Result<(), Box<dyn Error>> {
         let (left, _, _, bottom) = self.get_game_bounds();
 
         if self.wsize.rows < SCREEN_HEIGHT + 5 || self.wsize.columns < SCREEN_WIDTH + 5 {
@@ -89,7 +89,8 @@ impl Render {
             return Ok(());
         }
 
-        if self.wsize_updated {
+        if self.wsize_updated || game_state.request_clear_render {
+            game_state.request_clear_render = false;
             self.wsize_updated = false;
 
             self.render_borders()?;
@@ -119,7 +120,7 @@ impl Render {
         Ok(())
     }
 
-    pub fn render_host_menu(&mut self, game_state: &GameState) -> Result<(), Box<dyn Error>> {
+    pub fn render_host_menu(&mut self, game_state: &mut GameState) -> Result<(), Box<dyn Error>> {
         let (left, _, _, bottom) = self.get_game_bounds();
 
         if self.wsize.rows < SCREEN_HEIGHT + 5 || self.wsize.columns < SCREEN_WIDTH + 5 {
@@ -130,6 +131,7 @@ impl Render {
         }
 
         if self.wsize_updated || game_state.request_clear_render {
+            game_state.request_clear_render = false;
             self.wsize_updated = false;
 
             self.render_borders()?;
