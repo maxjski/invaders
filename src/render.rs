@@ -146,15 +146,34 @@ impl Render {
         queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 21))?;
         write!(self.stdout, "HOSTING")?;
         queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
+        match game_state.networking.listener_task {
+            Option::Some(_) => {
+                write!(self.stdout, "Listening...")?;
+            }
+            Option::None => {
+                write!(self.stdout, "Listening Broken")?;
+            }
+        }
+
+        queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 19))?;
         match game_state.networking.peer {
-            Option::Some(addr) => {
-                write!(self.stdout, "{}", addr)?;
+            Option::Some(_) => {
+                write!(self.stdout, "Connected")?;
             }
             Option::None => {
                 write!(self.stdout, "No one joined yet...")?;
             }
         }
 
+        queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 18))?;
+        match game_state.networking.host {
+            false => {
+                write!(self.stdout, "Tried spawn")?;
+            }
+            true => {
+                write!(self.stdout, "didnt try yet")?;
+            }
+        }
         self.stdout.flush()?;
 
         Ok(())

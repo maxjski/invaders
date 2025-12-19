@@ -82,6 +82,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if tick_pending {
+            // 1. Handle Task Abort (if user leaves the hosting menu)
+            if !game_state.main_menu.hosting {
+                if let Some(handle) = game_state.networking.listener_task.take() {
+                    handle.abort();
+                }
+            }
+            // 2. Handle Task Creation (if we are hosting but no task exists)
+            else if game_state.networking.listener_task.is_none() {
+                let tx_net = tx.clone();
+                let task = tokio::spawn(async move {
+                    // Use a match here instead of unwrap to prevent the task from panicking silently
+                    match TcpListener::bind("127.0.0.1:23471").await {
+                        Ok(listener) => {
+                            if let Ok((_socket, addr)) = listener.accept().await {
+                                let _ = tx_net.send(GameEvent::ClientConnected(addr));
+                            }
+                        }
+                        Err(_) => { /* Handle bind error if necessary */ }
+                    }
+                });
+                game_state.networking.host = true;
+                game_state.networking.listener_task = Some(task);
+            }
+
             if game_state.main_menu.in_menu {
                 if game_state.main_menu.hosting {
                     renderer.render_host_menu(&mut game_state)?;
@@ -90,30 +114,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 continue;
             }
-
-            match game_state.networking.listener_task {
-                Option::Some(ref handle) => {
-                    if !game_state.main_menu.hosting && !handle.is_finished() {
-                        handle.abort();
-                        game_state.networking.listener_task = Option::None;
-                    } else {
-                        continue;
-                    }
-                }
-                Option::None => {
-                    if game_state.main_menu.hosting {
-                        let tx_net = tx.clone();
-
-                        tokio::spawn(async move {
-                            let listener = TcpListener::bind("127.0.0.1:23471").await.unwrap();
-
-                            if let Ok((_socket, addr)) = listener.accept().await {
-                                let _ = tx_net.send(GameEvent::ClientConnected(addr));
-                            } // TODO: Handle error
-                        });
-                    }
-                }
-            }
+            // NO 'continue' here. Let the code flow down to the renderers!
+            // match game_state.networking.listener_task {
+            //     Option::Some(ref handle) => {
+            //         if !game_state.main_menu.hosting && !handle.is_finished() {
+            //             handle.abort();
+            //             game_state.networking.listener_task = Option::None;
+            //         } else {
+            //             renderer.render_host_menu(&mut game_state)?;
+            //             continue;
+            //         }
+            //     }
+            //     Option::None => {
+            //         if game_state.main_menu.hosting {
+            //             let tx_net = tx.clone();
+            //
+            //             let task = tokio::spawn(async move {
+            //                 let listener = TcpListener::bind("127.0.0.1:23471").await.unwrap();
+            //
+            //                 if let Ok((_socket, addr)) = listener.accept().await {
+            //                     let _ = tx_net.send(GameEvent::ClientConnected(addr));
+            //                 } // TODO: Handle error
+            //             });
+            //             game_state.networking.listener_task = Some(task);
+            //         }
+            //     }
+            // }
 
             if game_state.restart_notifier {
                 (game_state, renderer) = restart_world(game_state.high_score)?;
