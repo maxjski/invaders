@@ -49,7 +49,7 @@ pub struct MainMenu {
 }
 
 pub struct GameNetworking {
-    pub is_listening: bool,
+    pub listener_task: Option<tokio::task::JoinHandle<()>>,
     pub host: bool,
     pub peer: Option<std::net::SocketAddr>,
 }

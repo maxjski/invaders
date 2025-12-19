@@ -65,7 +65,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         networking: GameNetworking {
             host: false,
             peer: Option::None,
-            is_listening: false,
+            listener_task: Option::None,
         },
         request_clear_render: false,
     };
@@ -138,7 +138,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
         networking: GameNetworking {
             host: false,
             peer: Option::None,
-            is_listening: false,
+            listener_task: Option::None,
         },
         request_clear_render: false,
     };

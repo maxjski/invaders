@@ -50,7 +50,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         match rx.recv().await {
             Some(GameEvent::Quit) => {
                 if game_state.main_menu.in_menu {
-                    break;
+                    if game_state.main_menu.hosting {
+                        game_state.main_menu.hosting = false;
+                        game_state.request_clear_render = true;
+                    } else {
+                        break;
+                    }
                 } else {
                     game_state.main_menu.in_menu = true;
                     game_state.request_clear_render = true;
@@ -86,19 +91,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 continue;
             }
 
-            if game_state.main_menu.hosting && !game_state.networking.is_listening {
-                game_state.networking.is_listening = true;
+            match game_state.networking.listener_task {
+                Option::Some(ref handle) => {
+                    if !game_state.main_menu.hosting && !handle.is_finished() {
+                        handle.abort();
+                        game_state.networking.listener_task = Option::None;
+                    } else {
+                        continue;
+                    }
+                }
+                Option::None => {
+                    if game_state.main_menu.hosting {
+                        let tx_net = tx.clone();
 
-                let tx_net = tx.clone();
-                tokio::spawn(async move {
-                    let listener = TcpListener::bind("127.0.0.1:23471").await.unwrap();
+                        tokio::spawn(async move {
+                            let listener = TcpListener::bind("127.0.0.1:23471").await.unwrap();
 
-                    if let Ok((_socket, addr)) = listener.accept().await {
-                        let _ = tx_net.send(GameEvent::ClientConnected(addr));
-                    } // TODO: Handle error
-                });
-
-                continue;
+                            if let Ok((_socket, addr)) = listener.accept().await {
+                                let _ = tx_net.send(GameEvent::ClientConnected(addr));
+                            } // TODO: Handle error
+                        });
+                    }
+                }
             }
 
             if game_state.restart_notifier {
@@ -117,6 +131,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 game_state.pause_notifier = false;
             }
+
             if game_state.game_over_notifier {
                 if game_state.game_over {
                     game_state.game_over = false;
