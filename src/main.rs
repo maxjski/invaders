@@ -1,10 +1,10 @@
 use std::error::Error;
-use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use crossterm::{ExecutableCommand, cursor, event::PopKeyboardEnhancementFlags, terminal};
 
 use tokio::net::TcpListener;
+use tokio::sync::mpsc;
 
 mod components;
 mod events;
@@ -21,7 +21,7 @@ use crate::systems::*;
 async fn main() -> Result<(), Box<dyn Error>> {
     // Networking
 
-    let (tx, rx) = mpsc::channel();
+    let (tx, mut rx) = mpsc::unbounded_channel();
 
     spawn_coordination_threads(tx);
 
@@ -47,14 +47,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     loop {
         // Block until at least one event arrives
         let mut tick_pending = false;
-        match rx.recv() {
-            Ok(event) => match event {
-                GameEvent::Quit => break,
-                other => {
-                    tick_pending |= handle_event(other, &mut renderer, &mut game_state);
-                }
-            },
-            Err(_) => continue,
+        match rx.recv().await {
+            Some(GameEvent::Quit) => break,
+            Some(event) => tick_pending |= handle_event(event, &mut renderer, &mut game_state),
+            _ => break,
         };
 
         // Drain any queued events; fold multiple ticks into a single step
@@ -62,6 +58,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             match event {
                 GameEvent::Quit => {
                     // Exit immediately on quit
+                    renderer.terminal_disable_raw(kb_enhanced)?;
+
                     return Ok(());
                 }
                 other => {
@@ -79,10 +77,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if game_state.main_menu.hosting {
                 let listener = TcpListener::bind("127.0.0.1:2347").await?;
 
-                match listener.accept().await {
-                    Ok(_) => continue;
-                    Err(_) => break;
-                }
+                // match listener.accept().await {
+                //     Ok(_) => continue;
+                //     Err(_) => break;
+                // }
 
                 continue;
             }
@@ -147,6 +145,5 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Disable keyboard enhancement (if enabled), show cursor again, and disable raw mode before exiting
     renderer.terminal_disable_raw(kb_enhanced)?;
-
     Ok(())
 }

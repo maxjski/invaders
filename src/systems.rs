@@ -59,6 +59,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         main_menu: MainMenu {
             in_menu: true,
             active_menu_item: MenuItem::HostGame,
+            hosting: false,
         },
         request_clear_render: false,
     };
@@ -126,6 +127,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
         main_menu: MainMenu {
             in_menu: false,
             active_menu_item: MenuItem::PlaySolo,
+            hosting: false,
         },
         request_clear_render: false,
     };
@@ -341,22 +343,6 @@ fn process_enemies(delta_time: Duration, game_state: &mut GameState) {
         )>()
         .with::<&Enemy>()
     {
-        let chance = rand::random::<f64>() * 100.0;
-
-        if proj_spawn.probability > chance {
-            projectiles_to_spawn.push((
-                Position {
-                    x: pos.x + 2,
-                    y: pos.y - 1,
-                },
-                Velocity {
-                    move_accumulator: 0.0,
-                    speed: proj_spawn.projectile_speed,
-                    direction: Direction::None,
-                },
-            ))
-        }
-
         match game_state.enemy_direction {
             Direction::Right => {
                 vel.move_accumulator += vel.speed * delta_time.as_secs_f32();
@@ -370,6 +356,22 @@ fn process_enemies(delta_time: Duration, game_state: &mut GameState) {
         }
 
         if vel.move_accumulator >= 1.0 || vel.move_accumulator <= -1.0 {
+            let chance = rand::random::<f64>() * 100.0;
+
+            if proj_spawn.probability > chance {
+                projectiles_to_spawn.push((
+                    Position {
+                        x: pos.x + 2,
+                        y: pos.y - 1,
+                    },
+                    Velocity {
+                        move_accumulator: 0.0,
+                        speed: proj_spawn.projectile_speed,
+                        direction: Direction::None,
+                    },
+                ))
+            }
+
             // Move in whole-cell steps, keep fractional remainder to avoid drift and asymmetry
             let steps = vel.move_accumulator.trunc();
             let new_pos = pos.x as i32 + steps as i32;

@@ -1,10 +1,10 @@
 use crate::{Direction, GameState, MainMenu, MenuItem, Player, Render, Velocity};
-use std::sync::mpsc::Sender;
-use std::thread;
 use std::time::Duration;
 
+use tokio::sync::mpsc;
+
 use crossterm::{
-    event::{Event, KeyCode, read},
+    event::{Event, KeyCode},
     terminal,
 };
 
@@ -160,21 +160,23 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
     }
 }
 
-pub fn spawn_coordination_threads(tx: Sender<GameEvent>) {
+pub fn spawn_coordination_threads(tx: mpsc::UnboundedSender<GameEvent>) {
     let tx_tick = tx.clone();
-    thread::spawn(move || {
+
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_millis(16));
         loop {
+            interval.tick().await;
             if tx_tick.send(GameEvent::Tick).is_err() {
                 break;
             }
-            thread::sleep(Duration::from_millis(16));
         }
     });
 
     // handle events
-    thread::spawn(move || {
+    tokio::task::spawn_blocking(move || {
         loop {
-            match read() {
+            match crossterm::event::read() {
                 Ok(event) => match event {
                     Event::Key(key_event) => {
                         if key_event.code == KeyCode::Char('q') {

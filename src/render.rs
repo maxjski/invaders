@@ -232,6 +232,7 @@ impl Render {
         self.stdout.execute(Clear(ClearType::All))?;
         self.stdout.execute(cursor::Show)?;
         terminal::disable_raw_mode()?;
+        self.stdout.flush()?;
         Ok(())
     }
 
