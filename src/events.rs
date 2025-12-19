@@ -1,6 +1,7 @@
 use crate::{Direction, GameState, MainMenu, MenuItem, Player, Render, Velocity};
 use std::time::Duration;
 
+use std::net::SocketAddr;
 use tokio::sync::mpsc;
 
 use crossterm::{
@@ -20,6 +21,7 @@ pub enum GameEvent {
     PlayerShootEnd,
     Pause,
     Restart,
+    ClientConnected(SocketAddr),
 }
 
 pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut GameState) -> bool {
@@ -156,12 +158,13 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::Tick => true,
+        GameEvent::ClientConnected(addr) => false,
         GameEvent::Quit => false,
     }
 }
 
-pub fn spawn_coordination_threads(tx: mpsc::UnboundedSender<GameEvent>) {
-    let tx_tick = tx.clone();
+pub fn spawn_coordination_threads(tx_main: &mpsc::UnboundedSender<GameEvent>) {
+    let tx_tick = tx_main.clone();
 
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_millis(16));
@@ -174,6 +177,7 @@ pub fn spawn_coordination_threads(tx: mpsc::UnboundedSender<GameEvent>) {
     });
 
     // handle events
+    let tx = tx_main.clone();
     tokio::task::spawn_blocking(move || {
         loop {
             match crossterm::event::read() {

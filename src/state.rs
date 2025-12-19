@@ -45,4 +45,5 @@ pub struct MainMenu {
     pub active_menu_item: MenuItem,
 
     pub hosting: bool,
+    pub is_listening: bool,
 }

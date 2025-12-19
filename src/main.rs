@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let (tx, mut rx) = mpsc::unbounded_channel();
 
-    spawn_coordination_threads(tx);
+    spawn_coordination_threads(&tx);
 
     let (mut game_state, mut renderer) = create_world()?;
 
@@ -74,13 +74,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 continue;
             }
 
-            if game_state.main_menu.hosting {
-                let listener = TcpListener::bind("127.0.0.1:2347").await?;
+            if game_state.main_menu.hosting && !game_state.main_menu.is_listening {
+                game_state.main_menu.is_listening = true;
 
-                // match listener.accept().await {
-                //     Ok(_) => continue;
-                //     Err(_) => break;
-                // }
+                let tx_net = tx.clone();
+                tokio::spawn(async move {
+                    let listener = TcpListener::bind("127.0.0.1:23471").await.unwrap();
+
+                    if let Ok((_socket, addr)) = listener.accept().await {
+                        let _ = tx_net.send(GameEvent::ClientConnected(addr));
+                    } // TODO: Handle error
+                });
 
                 continue;
             }

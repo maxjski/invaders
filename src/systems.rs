@@ -60,6 +60,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             in_menu: true,
             active_menu_item: MenuItem::HostGame,
             hosting: false,
+            is_listening: false,
         },
         request_clear_render: false,
     };
@@ -128,6 +129,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             in_menu: false,
             active_menu_item: MenuItem::PlaySolo,
             hosting: false,
+            is_listening: false,
         },
         request_clear_render: false,
     };
