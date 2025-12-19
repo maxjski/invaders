@@ -119,6 +119,45 @@ impl Render {
         Ok(())
     }
 
+    pub fn render_host_menu(&mut self, game_state: &GameState) -> Result<(), Box<dyn Error>> {
+        let (left, _, _, bottom) = self.get_game_bounds();
+
+        if self.wsize.rows < SCREEN_HEIGHT + 5 || self.wsize.columns < SCREEN_WIDTH + 5 {
+            queue!(self.stdout, Clear(ClearType::All))?;
+            queue!(self.stdout, cursor::MoveTo(0, 0))?;
+            write!(self.stdout, "Terminal too small")?;
+            return Ok(());
+        }
+
+        if self.wsize_updated || game_state.request_clear_render {
+            self.wsize_updated = false;
+
+            self.render_borders()?;
+            self.draw_menu_items(
+                game_state.score,
+                game_state.high_score,
+                game_state.player_lives,
+                game_state.paused,
+            )?;
+        }
+
+        queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 21))?;
+        write!(self.stdout, "HOSTING")?;
+        queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
+        match game_state.networking.peer {
+            Option::Some(addr) => {
+                write!(self.stdout, "{}", addr)?;
+            }
+            Option::None => {
+                write!(self.stdout, "No one joined yet...")?;
+            }
+        }
+
+        self.stdout.flush()?;
+
+        Ok(())
+    }
+
     pub fn draw_menu_items(
         &mut self,
         score: i32,

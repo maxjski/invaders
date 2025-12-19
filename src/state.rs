@@ -25,6 +25,7 @@ pub struct GameState {
 
     pub player_input_handler: PlayerInputHandler,
     pub main_menu: MainMenu,
+    pub networking: GameNetworking,
     pub request_clear_render: bool,
 }
 
@@ -45,5 +46,10 @@ pub struct MainMenu {
     pub active_menu_item: MenuItem,
 
     pub hosting: bool,
+}
+
+pub struct GameNetworking {
     pub is_listening: bool,
+    pub host: bool,
+    pub peer: Option<std::net::SocketAddr>,
 }

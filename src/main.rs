@@ -70,12 +70,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         if tick_pending {
             if game_state.main_menu.in_menu {
-                renderer.render_main_menu(&game_state)?;
+                if game_state.main_menu.hosting {
+                    renderer.render_host_menu(&game_state)?;
+                } else {
+                    renderer.render_main_menu(&game_state)?;
+                }
                 continue;
             }
 
-            if game_state.main_menu.hosting && !game_state.main_menu.is_listening {
-                game_state.main_menu.is_listening = true;
+            if game_state.main_menu.hosting && !game_state.networking.is_listening {
+                game_state.networking.is_listening = true;
 
                 let tx_net = tx.clone();
                 tokio::spawn(async move {

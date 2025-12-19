@@ -40,6 +40,8 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
                 match game_state.main_menu.active_menu_item {
                     MenuItem::HostGame => {
                         game_state.main_menu.active_menu_item = MenuItem::HostGame;
+                        game_state.main_menu.hosting = true;
+                        game_state.request_clear_render = true;
                     }
                     MenuItem::JoinGame => {
                         game_state.main_menu.active_menu_item = MenuItem::JoinGame;
@@ -158,7 +160,10 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::Tick => true,
-        GameEvent::ClientConnected(addr) => false,
+        GameEvent::ClientConnected(addr) => {
+            game_state.networking.peer = Some(addr);
+            false
+        }
         GameEvent::Quit => false,
     }
 }
