@@ -39,12 +39,12 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             if game_state.main_menu.in_menu {
                 match game_state.main_menu.active_menu_item {
                     MenuItem::HostGame => {
-                        game_state.main_menu.active_menu_item = MenuItem::HostGame;
                         game_state.main_menu.hosting = true;
                         game_state.request_clear_render = true;
                     }
                     MenuItem::JoinGame => {
-                        game_state.main_menu.active_menu_item = MenuItem::JoinGame;
+                        game_state.main_menu.joining = true;
+                        game_state.request_clear_render = true;
                     }
                     MenuItem::PlaySolo => {
                         game_state.main_menu.in_menu = false;

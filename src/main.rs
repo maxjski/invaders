@@ -53,6 +53,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     if game_state.main_menu.hosting {
                         game_state.main_menu.hosting = false;
                         game_state.request_clear_render = true;
+                        game_state.restart_notifier = true;
+                        game_state.networking.listener_task = Option::None;
+                        game_state.networking.peer = Option::None;
                     } else {
                         break;
                     }
@@ -82,17 +85,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if tick_pending {
-            // 1. Handle Task Abort (if user leaves the hosting menu)
             if !game_state.main_menu.hosting {
                 if let Some(handle) = game_state.networking.listener_task.take() {
                     handle.abort();
                 }
-            }
-            // 2. Handle Task Creation (if we are hosting but no task exists)
-            else if game_state.networking.listener_task.is_none() {
+            } else if game_state.networking.listener_task.is_none() {
                 let tx_net = tx.clone();
                 let task = tokio::spawn(async move {
-                    // Use a match here instead of unwrap to prevent the task from panicking silently
                     match TcpListener::bind("127.0.0.1:23471").await {
                         Ok(listener) => {
                             if let Ok((_socket, addr)) = listener.accept().await {

@@ -46,6 +46,7 @@ pub struct MainMenu {
     pub active_menu_item: MenuItem,
 
     pub hosting: bool,
+    pub joining: bool,
 }
 
 pub struct GameNetworking {
