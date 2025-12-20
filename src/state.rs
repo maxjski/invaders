@@ -41,12 +41,18 @@ pub enum MenuItem {
     PlaySolo,
 }
 
+pub enum Screen {
+    Main,
+    Hosting,
+    Joining,
+    Game,
+}
+
 pub struct MainMenu {
     pub in_menu: bool,
     pub active_menu_item: MenuItem,
 
-    pub hosting: bool,
-    pub joining: bool,
+    pub screen: Screen,
 }
 
 pub struct GameNetworking {

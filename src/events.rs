@@ -1,4 +1,4 @@
-use crate::{Direction, GameState, MainMenu, MenuItem, Player, Render, Velocity};
+use crate::{Direction, GameState, MainMenu, MenuItem, Player, Render, Screen, Velocity};
 use std::time::Duration;
 
 use std::net::SocketAddr;
@@ -39,11 +39,11 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             if game_state.main_menu.in_menu {
                 match game_state.main_menu.active_menu_item {
                     MenuItem::HostGame => {
-                        game_state.main_menu.hosting = true;
+                        game_state.main_menu.screen = Screen::Hosting;
                         game_state.request_clear_render = true;
                     }
                     MenuItem::JoinGame => {
-                        game_state.main_menu.joining = true;
+                        game_state.main_menu.screen = Screen::Joining;
                         game_state.request_clear_render = true;
                     }
                     MenuItem::PlaySolo => {

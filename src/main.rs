@@ -51,6 +51,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Some(GameEvent::Quit) => {
                 if game_state.main_menu.in_menu {
                     if game_state.main_menu.hosting {
+                        // HERE WE NEED TO CLEAR CONNECTION STATE
                         game_state.main_menu.hosting = false;
                         game_state.request_clear_render = true;
                         game_state.restart_notifier = true;
