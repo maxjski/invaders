@@ -3,8 +3,8 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::{Duration, Instant};
 
 use crossterm::{ExecutableCommand, cursor, event::PopKeyboardEnhancementFlags, terminal};
-
 use tokio::io::AsyncWriteExt;
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
@@ -106,6 +106,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 if let Ok((stream, addr)) = listener.accept().await {
                                     let _ = tx_net.send(GameEvent::PeerConnected(addr));
                                     let (mut reader, mut writer) = stream.into_split();
+
+                                    let tx_game_events = tx_net.clone();
+
+                                    tokio::spawn(async move {
+                                        let mut buffer = vec![0u8; 1024];
+
+                                        while reader.readable().await.is_ok() {
+                                            match reader.try_read(&mut buffer) {
+                                                Ok(0) => break,
+                                                Ok(n) => {
+                                                    if let Ok(packet) =
+                                                        bincode::deserialize::<NetPacket>(
+                                                            &buffer[..n],
+                                                        )
+                                                    {
+                                                        let _ = tx_game_events.send(
+                                                            GameEvent::PacketReceived(packet),
+                                                        );
+                                                    }
+                                                }
+                                                Err(_) => break,
+                                            }
+                                        }
+                                    });
                                 }
                             }
                             Err(_) => { /* Handle bind error if necessary */ }
