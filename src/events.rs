@@ -21,7 +21,7 @@ pub enum GameEvent {
     PlayerShootEnd,
     Pause,
     Restart,
-    PeerConnected(SocketAddr),
+    PeerConnected(SocketAddr, mpsc::UnboundedSender<NetPacket>),
     PacketReceived(NetPacket),
 }
 
@@ -163,8 +163,9 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::Tick => true,
-        GameEvent::PeerConnected(addr) => {
+        GameEvent::PeerConnected(addr, tx_writer) => {
             game_state.networking.peer = Some(addr);
+            game_state.networking.tx_writer = Some(tx_writer);
             false
         }
         GameEvent::Quit => false,

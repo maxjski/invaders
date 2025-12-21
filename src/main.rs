@@ -103,7 +103,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         match TcpListener::bind("127.0.0.1:23471").await {
                             Ok(listener) => {
                                 if let Ok((stream, addr)) = listener.accept().await {
-                                    let _ = tx_net.send(GameEvent::PeerConnected(addr));
+                                    // let _ = tx_net.send(GameEvent::PeerConnected(addr));
                                     let (reader, mut writer) = stream.into_split();
 
                                     let tx_game_events = tx_net.clone();
@@ -132,6 +132,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                                     let (mut tx_outbox, mut rx_outbox) =
                                         mpsc::unbounded_channel::<NetPacket>();
+
+                                    let _ = tx_net.send(GameEvent::PeerConnected(addr, tx_outbox));
                                     tokio::spawn(async move {
                                         while let Some(packet) = rx_outbox.recv().await {
                                             let bytes = bincode::serialize(&packet).unwrap();
@@ -156,7 +158,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 // }
                                 let socket =
                                     SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 23471);
-                                let _ = tx_net.send(GameEvent::PeerConnected(socket));
+                                let (mut tx_outbox, mut rx_outbox) =
+                                    mpsc::unbounded_channel::<NetPacket>();
+                                let _ = tx_net.send(GameEvent::PeerConnected(socket, tx_outbox));
                             }
                             Err(_) => { /* Handle bind error if necessary */ }
                         }
