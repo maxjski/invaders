@@ -63,7 +63,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     // game_state.networking.listener_task = Option::None;
                     // game_state.networking.peer = Option::None;
                 }
-                Screen::Joining => (),
+                Screen::Joining => {
+                    game_state.exit_to_menu();
+                }
                 Screen::Main => {
                     break;
                 }
@@ -114,6 +116,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 Screen::Main => {
                     renderer.render_main_menu(&mut game_state)?;
+                    continue;
+                }
+                Screen::Joining => {
+                    renderer.render_join_menu(&mut game_state)?;
                     continue;
                 }
                 _ => (),
