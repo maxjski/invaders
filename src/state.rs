@@ -55,6 +55,7 @@ pub struct MainMenu {
 
 pub struct GameNetworking {
     pub stay_online: bool,
+    /// NEVER SET IT TO Option::None
     pub listener_task: Option<tokio::task::JoinHandle<()>>,
     pub host: bool,
     pub peer: Option<std::net::SocketAddr>,
@@ -77,7 +78,6 @@ impl GameNetworking {
     pub fn reset(&mut self) {
         self.stay_online = false;
         self.host = false;
-        self.listener_task = Option::None;
         self.peer = Option::None;
     }
 }

@@ -93,6 +93,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if !game_state.networking.stay_online {
                 if let Some(handle) = game_state.networking.listener_task.take() {
                     handle.abort();
+                    game_state.networking.listener_task = Option::None;
                 }
             } else if game_state.networking.listener_task.is_none() {
                 let tx_net = tx.clone();

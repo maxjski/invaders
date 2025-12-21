@@ -9,9 +9,7 @@ use crossterm::{
     terminal::{self, Clear, ClearType},
 };
 
-use crate::{
-    GameState, MainMenu, MenuItem, Position, PrevPosition, Renderable, SCREEN_HEIGHT, SCREEN_WIDTH,
-};
+use crate::{GameState, MenuItem, Position, PrevPosition, Renderable, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub struct Render {
     pub wsize_updated: bool,
