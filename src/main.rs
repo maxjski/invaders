@@ -48,24 +48,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Block until at least one event arrives
         let mut tick_pending = false;
         match rx.recv().await {
-            Some(GameEvent::Quit) => {
-                if game_state.main_menu.in_menu {
-                    if game_state.main_menu.hosting {
-                        // HERE WE NEED TO CLEAR CONNECTION STATE
-                        game_state.main_menu.hosting = false;
-                        game_state.request_clear_render = true;
-                        game_state.restart_notifier = true;
-                        game_state.networking.listener_task = Option::None;
-                        game_state.networking.peer = Option::None;
-                    } else {
-                        break;
-                    }
-                } else {
-                    game_state.main_menu.in_menu = true;
-                    game_state.request_clear_render = true;
-                    game_state.restart_notifier = true;
+            Some(GameEvent::Quit) => match game_state.main_menu.screen {
+                Screen::Game => {
+                    game_state.exit_to_menu();
+                    // game_state.main_menu.screen = Screen::Main;
+                    // game_state.request_clear_render = true;
+                    // game_state.restart_notifier = true;
                 }
-            }
+                Screen::Hosting => {
+                    game_state.exit_to_menu();
+                    // game_state.main_menu.screen = Screen::Main;
+                    // game_state.request_clear_render = true;
+                    // game_state.restart_notifier = true;
+                    // game_state.networking.listener_task = Option::None;
+                    // game_state.networking.peer = Option::None;
+                }
+                Screen::Joining => (),
+                Screen::Main => {
+                    break;
+                }
+            },
             Some(event) => tick_pending |= handle_event(event, &mut renderer, &mut game_state),
             _ => break,
         };
@@ -86,7 +88,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if tick_pending {
-            if !game_state.main_menu.hosting {
+            if !game_state.networking.stay_online {
                 if let Some(handle) = game_state.networking.listener_task.take() {
                     handle.abort();
                 }
@@ -105,13 +107,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 game_state.networking.listener_task = Some(task);
             }
 
-            if game_state.main_menu.in_menu {
-                if game_state.main_menu.hosting {
+            match game_state.main_menu.screen {
+                Screen::Hosting => {
                     renderer.render_host_menu(&mut game_state)?;
-                } else {
-                    renderer.render_main_menu(&mut game_state)?;
+                    continue;
                 }
-                continue;
+                Screen::Main => {
+                    renderer.render_main_menu(&mut game_state)?;
+                    continue;
+                }
+                _ => (),
             }
 
             if game_state.restart_notifier {

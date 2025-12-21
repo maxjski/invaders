@@ -1,4 +1,4 @@
-use crate::{Direction, GameState, MainMenu, MenuItem, Player, Render, Screen, Velocity};
+use crate::{Direction, GameState, MenuItem, Player, Render, Screen, Velocity};
 use std::time::Duration;
 
 use std::net::SocketAddr;
@@ -36,7 +36,7 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
         }
         GameEvent::PlayerShoot => {
             // Handle while In Menu
-            if game_state.main_menu.in_menu {
+            if let Screen::Main = game_state.main_menu.screen {
                 match game_state.main_menu.active_menu_item {
                     MenuItem::HostGame => {
                         game_state.main_menu.screen = Screen::Hosting;
@@ -47,7 +47,7 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
                         game_state.request_clear_render = true;
                     }
                     MenuItem::PlaySolo => {
-                        game_state.main_menu.in_menu = false;
+                        game_state.main_menu.screen = Screen::Game;
                         game_state.request_clear_render = true;
                     }
                 }
@@ -63,7 +63,7 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
         }
         GameEvent::MovePlayerLeft => {
             // Handle when in menu
-            if game_state.main_menu.in_menu {
+            if let Screen::Main = game_state.main_menu.screen {
                 match game_state.main_menu.active_menu_item {
                     MenuItem::HostGame => {
                         game_state.main_menu.active_menu_item = MenuItem::PlaySolo;
@@ -107,7 +107,7 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
         }
         GameEvent::MovePlayerRight => {
             // Handle when in menu
-            if game_state.main_menu.in_menu {
+            if let Screen::Main = game_state.main_menu.screen {
                 match game_state.main_menu.active_menu_item {
                     MenuItem::HostGame => {
                         game_state.main_menu.active_menu_item = MenuItem::JoinGame;

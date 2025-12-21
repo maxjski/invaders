@@ -49,14 +49,23 @@ pub enum Screen {
 }
 
 pub struct MainMenu {
-    pub in_menu: bool,
     pub active_menu_item: MenuItem,
-
     pub screen: Screen,
 }
 
 pub struct GameNetworking {
+    pub stay_online: bool,
     pub listener_task: Option<tokio::task::JoinHandle<()>>,
     pub host: bool,
     pub peer: Option<std::net::SocketAddr>,
+}
+
+impl GameState {
+    pub fn exit_to_menu(&mut self) {
+        self.main_menu.screen = Screen::Main;
+        self.request_clear_render = true;
+        self.restart_notifier = true;
+        self.networking.listener_task = Option::None;
+        self.networking.peer = Option::None;
+    }
 }
