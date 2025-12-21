@@ -46,6 +46,7 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
                     MenuItem::JoinGame => {
                         game_state.main_menu.screen = Screen::Joining;
                         game_state.request_clear_render = true;
+                        game_state.networking.join();
                     }
                     MenuItem::PlaySolo => {
                         game_state.main_menu.screen = Screen::Game;

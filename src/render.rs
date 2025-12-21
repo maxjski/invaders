@@ -144,7 +144,7 @@ impl Render {
         queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 21))?;
         write!(self.stdout, "HOSTING")?;
         queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
-        match game_state.networking.listener_task {
+        match game_state.networking.connection_task {
             Option::Some(_) => {
                 write!(self.stdout, "Listening...")?;
             }
@@ -193,7 +193,7 @@ impl Render {
         queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 21))?;
         write!(self.stdout, "JOINING")?;
         queue!(self.stdout, cursor::MoveTo(left + 35, bottom - 20))?;
-        match game_state.networking.listener_task {
+        match game_state.networking.connection_task {
             Option::Some(_) => {
                 write!(self.stdout, "Joining...")?;
             }

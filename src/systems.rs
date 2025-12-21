@@ -65,7 +65,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             stay_online: false,
             host: false,
             peer: Option::None,
-            listener_task: Option::None,
+            connection_task: Option::None,
         },
         request_clear_render: false,
     };
@@ -138,7 +138,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             stay_online: false,
             host: false,
             peer: Option::None,
-            listener_task: Option::None,
+            connection_task: Option::None,
         },
         request_clear_render: false,
     };

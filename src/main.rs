@@ -1,9 +1,11 @@
 use std::error::Error;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::{Duration, Instant};
 
 use crossterm::{ExecutableCommand, cursor, event::PopKeyboardEnhancementFlags, terminal};
 
-use tokio::net::TcpListener;
+use tokio::io::AsyncWriteExt;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
 mod components;
@@ -91,23 +93,41 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         if tick_pending {
             if !game_state.networking.stay_online {
-                if let Some(handle) = game_state.networking.listener_task.take() {
+                if let Some(handle) = game_state.networking.connection_task.take() {
                     handle.abort();
-                    game_state.networking.listener_task = Option::None;
+                    game_state.networking.connection_task = Option::None;
                 }
-            } else if game_state.networking.listener_task.is_none() {
-                let tx_net = tx.clone();
-                let task = tokio::spawn(async move {
-                    match TcpListener::bind("127.0.0.1:23471").await {
-                        Ok(listener) => {
-                            if let Ok((_socket, addr)) = listener.accept().await {
-                                let _ = tx_net.send(GameEvent::ClientConnected(addr));
+            } else if game_state.networking.connection_task.is_none() {
+                if game_state.networking.host {
+                    let tx_net = tx.clone();
+                    let task = tokio::spawn(async move {
+                        match TcpListener::bind("127.0.0.1:23471").await {
+                            Ok(listener) => {
+                                if let Ok((_socket, addr)) = listener.accept().await {
+                                    let _ = tx_net.send(GameEvent::ClientConnected(addr));
+                                }
                             }
+                            Err(_) => { /* Handle bind error if necessary */ }
                         }
-                        Err(_) => { /* Handle bind error if necessary */ }
-                    }
-                });
-                game_state.networking.listener_task = Some(task);
+                    });
+                    game_state.networking.connection_task = Some(task);
+                } else {
+                    let tx_net = tx.clone();
+                    let task = tokio::spawn(async move {
+                        match TcpStream::connect("127.0.0.1:23471").await {
+                            Ok(mut stream) => {
+                                // if let Ok((_socket, addr)) = listener.accept().await {
+                                //     let _ = tx_net.send(GameEvent::ClientConnected(addr));
+                                // }
+                                let socket =
+                                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 23471);
+                                let _ = tx_net.send(GameEvent::ClientConnected(socket));
+                            }
+                            Err(_) => { /* Handle bind error if necessary */ }
+                        }
+                    });
+                    game_state.networking.connection_task = Some(task);
+                }
             }
 
             match game_state.main_menu.screen {
