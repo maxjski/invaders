@@ -78,7 +78,7 @@ impl GameNetworking {
 
     pub fn join(&mut self) {
         self.stay_online = true;
-        self.host = true;
+        self.host = false;
     }
 
     pub fn reset(&mut self) {
