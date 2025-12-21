@@ -52,17 +52,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Some(GameEvent::Quit) => match game_state.main_menu.screen {
                 Screen::Game => {
                     game_state.exit_to_menu();
-                    // game_state.main_menu.screen = Screen::Main;
-                    // game_state.request_clear_render = true;
-                    // game_state.restart_notifier = true;
                 }
                 Screen::Hosting => {
                     game_state.exit_to_menu();
-                    // game_state.main_menu.screen = Screen::Main;
-                    // game_state.request_clear_render = true;
-                    // game_state.restart_notifier = true;
-                    // game_state.networking.listener_task = Option::None;
-                    // game_state.networking.peer = Option::None;
                 }
                 Screen::Joining => {
                     game_state.exit_to_menu();
@@ -130,7 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                         }
                                     });
 
-                                    let (mut tx_outbox, mut rx_outbox) =
+                                    let (tx_outbox, mut rx_outbox) =
                                         mpsc::unbounded_channel::<NetPacket>();
 
                                     let _ = tx_net.send(GameEvent::PeerConnected(addr, tx_outbox));
@@ -151,16 +143,44 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 } else {
                     let tx_net = tx.clone();
                     let task = tokio::spawn(async move {
-                        match TcpStream::connect("127.0.0.1:23471").await {
-                            Ok(mut stream) => {
-                                // if let Ok((_socket, addr)) = listener.accept().await {
-                                //     let _ = tx_net.send(GameEvent::ClientConnected(addr));
-                                // }
-                                let socket =
-                                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 23471);
-                                let (mut tx_outbox, mut rx_outbox) =
+                        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 23471);
+                        match TcpStream::connect(addr).await {
+                            Ok(stream) => {
+                                let (reader, mut writer) = stream.into_split();
+
+                                let tx_game_events = tx_net.clone();
+
+                                tokio::spawn(async move {
+                                    let mut buffer = vec![0u8; 1024];
+
+                                    while reader.readable().await.is_ok() {
+                                        match reader.try_read(&mut buffer) {
+                                            Ok(0) => break,
+                                            Ok(n) => {
+                                                if let Ok(packet) =
+                                                    bincode::deserialize::<NetPacket>(&buffer[..n])
+                                                {
+                                                    let _ = tx_game_events
+                                                        .send(GameEvent::PacketReceived(packet));
+                                                }
+                                            }
+                                            Err(_) => break,
+                                        }
+                                    }
+                                });
+
+                                let (tx_outbox, mut rx_outbox) =
                                     mpsc::unbounded_channel::<NetPacket>();
-                                let _ = tx_net.send(GameEvent::PeerConnected(socket, tx_outbox));
+
+                                let _ = tx_net.send(GameEvent::PeerConnected(addr, tx_outbox));
+                                tokio::spawn(async move {
+                                    while let Some(packet) = rx_outbox.recv().await {
+                                        let bytes = bincode::serialize(&packet).unwrap();
+
+                                        let _ = writer.write_all(&bytes).await;
+                                        let _ = writer.flush().await;
+                                    }
+                                });
                             }
                             Err(_) => { /* Handle bind error if necessary */ }
                         }
