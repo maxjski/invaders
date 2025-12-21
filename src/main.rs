@@ -4,7 +4,6 @@ use std::time::{Duration, Instant};
 
 use crossterm::{ExecutableCommand, cursor, event::PopKeyboardEnhancementFlags, terminal};
 use tokio::io::AsyncWriteExt;
-use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
@@ -105,7 +104,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             Ok(listener) => {
                                 if let Ok((stream, addr)) = listener.accept().await {
                                     let _ = tx_net.send(GameEvent::PeerConnected(addr));
-                                    let (mut reader, mut writer) = stream.into_split();
+                                    let (reader, mut writer) = stream.into_split();
 
                                     let tx_game_events = tx_net.clone();
 
@@ -128,6 +127,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                                 }
                                                 Err(_) => break,
                                             }
+                                        }
+                                    });
+
+                                    let (mut tx_outbox, mut rx_outbox) =
+                                        mpsc::unbounded_channel::<NetPacket>();
+                                    tokio::spawn(async move {
+                                        while let Some(packet) = rx_outbox.recv().await {
+                                            let bytes = bincode::serialize(&packet).unwrap();
+
+                                            let _ = writer.write_all(&bytes).await;
+                                            let _ = writer.flush().await;
                                         }
                                     });
                                 }

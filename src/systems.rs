@@ -66,6 +66,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             host: false,
             peer: Option::None,
             connection_task: Option::None,
+            tx_writer: Option::None,
         },
         request_clear_render: false,
     };
@@ -139,6 +140,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             host: false,
             peer: Option::None,
             connection_task: Option::None,
+            tx_writer: Option::None,
         },
         request_clear_render: false,
     };

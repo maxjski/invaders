@@ -1,5 +1,6 @@
-use crate::Direction;
+use crate::{Direction, NetPacket};
 use hecs::{Entity, World};
+use tokio::sync::mpsc::UnboundedSender;
 
 pub struct GameState {
     pub world: World,
@@ -59,6 +60,8 @@ pub struct GameNetworking {
     pub connection_task: Option<tokio::task::JoinHandle<()>>,
     pub host: bool,
     pub peer: Option<std::net::SocketAddr>,
+
+    pub tx_writer: Option<UnboundedSender<NetPacket>>,
 }
 
 impl GameState {
