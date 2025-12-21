@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub enum Direction {
     Right,
     Left,
@@ -41,3 +43,9 @@ pub struct PlayerProjectile;
 pub struct Enemy;
 
 pub struct EnemyProjectile;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum NetPacket {
+    PlayerInput { x: f32, shoot: bool },
+    GameStateUpdate { entities: Vec<(f32, f32)> },
+}

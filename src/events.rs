@@ -1,4 +1,4 @@
-use crate::{Direction, GameState, MenuItem, Player, Render, Screen, Velocity};
+use crate::{Direction, GameState, MenuItem, NetPacket, Player, Render, Screen, Velocity};
 use std::time::Duration;
 
 use std::net::SocketAddr;
@@ -21,7 +21,8 @@ pub enum GameEvent {
     PlayerShootEnd,
     Pause,
     Restart,
-    ClientConnected(SocketAddr),
+    PeerConnected(SocketAddr),
+    PacketReceived(NetPacket),
 }
 
 pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut GameState) -> bool {
@@ -162,11 +163,12 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             false
         }
         GameEvent::Tick => true,
-        GameEvent::ClientConnected(addr) => {
+        GameEvent::PeerConnected(addr) => {
             game_state.networking.peer = Some(addr);
             false
         }
         GameEvent::Quit => false,
+        _ => false,
     }
 }
 

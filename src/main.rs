@@ -103,8 +103,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     let task = tokio::spawn(async move {
                         match TcpListener::bind("127.0.0.1:23471").await {
                             Ok(listener) => {
-                                if let Ok((_socket, addr)) = listener.accept().await {
-                                    let _ = tx_net.send(GameEvent::ClientConnected(addr));
+                                if let Ok((stream, addr)) = listener.accept().await {
+                                    let _ = tx_net.send(GameEvent::PeerConnected(addr));
+                                    let (mut reader, mut writer) = stream.into_split();
                                 }
                             }
                             Err(_) => { /* Handle bind error if necessary */ }
@@ -121,7 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 // }
                                 let socket =
                                     SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 23471);
-                                let _ = tx_net.send(GameEvent::ClientConnected(socket));
+                                let _ = tx_net.send(GameEvent::PeerConnected(socket));
                             }
                             Err(_) => { /* Handle bind error if necessary */ }
                         }
