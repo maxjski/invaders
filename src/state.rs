@@ -65,7 +65,19 @@ impl GameState {
         self.main_menu.screen = Screen::Main;
         self.request_clear_render = true;
         self.restart_notifier = true;
-        self.networking.listener_task = Option::None;
-        self.networking.peer = Option::None;
+        self.networking.reset();
+    }
+}
+
+impl GameNetworking {
+    pub fn host(&mut self) {
+        self.stay_online = true;
+    }
+
+    pub fn reset(&mut self) {
+        self.stay_online = false;
+        self.host = false;
+        self.listener_task = Option::None;
+        self.peer = Option::None;
     }
 }
