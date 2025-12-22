@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::io::ErrorKind;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::{Duration, Instant};
 
@@ -117,7 +118,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                                         );
                                                     }
                                                 }
-                                                Err(_) => break,
+                                                // Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
+                                                //     continue;
+                                                // }
+                                                Err(_) => continue,
                                             }
                                         }
                                     });
@@ -164,7 +168,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                                         .send(GameEvent::PacketReceived(packet));
                                                 }
                                             }
-                                            Err(_) => break,
+                                            // Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
+                                            //     continue;
+                                            // }
+                                            Err(_) => continue,
                                         }
                                     }
                                 });

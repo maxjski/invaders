@@ -61,7 +61,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
         coplayer_handler: CoPlayerHandler {
             exists: false,
             player_shoot: false,
-            x: 0,
+            x: 55,
         },
         main_menu: MainMenu {
             active_menu_item: MenuItem::HostGame,
