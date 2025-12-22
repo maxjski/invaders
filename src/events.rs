@@ -38,28 +38,32 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
         }
         GameEvent::PlayerShoot => {
             // Handle while In Menu
-            if let Screen::Main = game_state.main_menu.screen {
-                match game_state.main_menu.active_menu_item {
-                    MenuItem::HostGame => {
-                        game_state.main_menu.screen = Screen::Hosting;
-                        game_state.request_clear_render = true;
-                        game_state.networking.host();
+            match game_state.main_menu.screen {
+                Screen::Main => {
+                    match game_state.main_menu.active_menu_item {
+                        MenuItem::HostGame => {
+                            game_state.main_menu.screen = Screen::Hosting;
+                            game_state.request_clear_render = true;
+                            game_state.networking.host();
+                        }
+                        MenuItem::JoinGame => {
+                            game_state.main_menu.screen = Screen::Joining;
+                            game_state.request_clear_render = true;
+                            game_state.networking.join();
+                        }
+                        MenuItem::PlaySolo => {
+                            game_state.main_menu.screen = Screen::Game;
+                            game_state.request_clear_render = true;
+                        }
                     }
-                    MenuItem::JoinGame => {
-                        game_state.main_menu.screen = Screen::Joining;
-                        game_state.request_clear_render = true;
-                        game_state.networking.join();
-                    }
-                    MenuItem::PlaySolo => {
-                        game_state.main_menu.screen = Screen::Game;
-                        game_state.request_clear_render = true;
-                    }
+                    false
                 }
-                return false;
+                Screen::Game => {
+                    game_state.player_input_handler.player_shoot = true;
+                    false
+                }
+                _ => false,
             }
-
-            game_state.player_input_handler.player_shoot = true;
-            false
         }
         GameEvent::PlayerShootEnd => {
             game_state.player_input_handler.player_shoot = false;
