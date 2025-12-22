@@ -1,7 +1,8 @@
+use crate::state::CoPlayerHandler;
 use crate::{
-    Direction, Enemy, EnemyProjectile, GameNetworking, GameState, MainMenu, MenuItem, NetPacket,
-    Player, PlayerInputHandler, PlayerProjectile, Position, PrevPosition, ProjectileSpawner,
-    Render, Renderable, Screen, Velocity,
+    CoPlayer, Direction, Enemy, EnemyProjectile, GameNetworking, GameState, MainMenu, MenuItem,
+    NetPacket, Player, PlayerInputHandler, PlayerProjectile, Position, PrevPosition,
+    ProjectileSpawner, Render, Renderable, Screen, Velocity,
 };
 use crossterm::terminal;
 use hecs::Entity;
@@ -57,6 +58,10 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             move_player_right: false,
             move_player_left: false,
         },
+        coplayer_handler: CoPlayerHandler {
+            player_shoot: false,
+            x: 0,
+        },
         main_menu: MainMenu {
             active_menu_item: MenuItem::HostGame,
             screen: Screen::Main,
@@ -87,7 +92,10 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
     Ok((game_state, renderer))
 }
 
-pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Error>> {
+pub fn restart_world(
+    high_score: i32,
+    multiplayer: bool,
+) -> Result<(GameState, Render), Box<dyn Error>> {
     let mut world = World::new();
 
     let player_entity = world.spawn((
@@ -108,6 +116,25 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
         },
     ));
 
+    if multiplayer {
+        world.spawn((
+            CoPlayer,
+            Position { x: 55, y: 7 },
+            PrevPosition { x: 55, y: 7 },
+            Velocity {
+                speed: 60.0,
+                move_accumulator: 0.0,
+                direction: Direction::None,
+            },
+            Renderable {
+                sprite_top: "⣆⡜⣛⢣⣠",
+                sprite_bottom: "⣿⣿⣿⣿⣿",
+                width: 5,
+                destroy: false,
+                erased: false,
+            },
+        ));
+    }
     // Each frame is a list of lines
     let mut game_state = GameState {
         world,
@@ -130,6 +157,10 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             player_shoot: false,
             move_player_right: false,
             move_player_left: false,
+        },
+        coplayer_handler: CoPlayerHandler {
+            player_shoot: false,
+            x: 0,
         },
         main_menu: MainMenu {
             active_menu_item: MenuItem::HostGame,
@@ -240,6 +271,16 @@ pub fn process_multiplayer(
         }
     }
 
+    if let Some((_, mut pos)) = game_state
+        .world
+        .query::<&Position>()
+        .with::<&CoPlayer>()
+        .iter()
+        .map(|(id, pos)| (id, *pos))
+        .next()
+    {
+        pos.x = game_state.coplayer_handler.x;
+    }
     Ok(())
 }
 

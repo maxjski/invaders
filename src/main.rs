@@ -206,7 +206,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
 
             if game_state.restart_notifier {
-                (game_state, renderer) = restart_world(game_state.high_score)?;
+                (game_state, renderer) = restart_world(game_state.high_score, false)?;
                 continue;
             }
 

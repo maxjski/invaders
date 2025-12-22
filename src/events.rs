@@ -1,6 +1,7 @@
 use crate::{Direction, GameState, MenuItem, NetPacket, Player, Render, Screen, Velocity};
 use std::time::Duration;
 
+use rand::distr::weighted;
 use std::net::SocketAddr;
 use tokio::sync::mpsc;
 
@@ -168,8 +169,15 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
             game_state.networking.tx_writer = Some(tx_writer);
             false
         }
+        GameEvent::PacketReceived(packet) => match packet {
+            NetPacket::PlayerInput { x, shoot } => {
+                game_state.coplayer_handler.x = x as u16;
+                game_state.coplayer_handler.player_shoot = shoot;
+                false
+            }
+            NetPacket::GameStateUpdate { entities } => false,
+        },
         GameEvent::Quit => false,
-        _ => false,
     }
 }
 

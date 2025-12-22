@@ -25,6 +25,7 @@ pub struct GameState {
     pub restart_notifier: bool,
 
     pub player_input_handler: PlayerInputHandler,
+    pub coplayer_handler: CoPlayerHandler,
     pub main_menu: MainMenu,
     pub networking: GameNetworking,
     pub request_clear_render: bool,
@@ -34,6 +35,11 @@ pub struct PlayerInputHandler {
     pub player_shoot: bool,
     pub move_player_left: bool,
     pub move_player_right: bool,
+}
+
+pub struct CoPlayerHandler {
+    pub x: u16,
+    pub player_shoot: bool,
 }
 
 pub enum MenuItem {
