@@ -43,6 +43,7 @@ pub struct CoPlayerHandler {
     pub player_shoot: bool,
 
     pub host_entities: Option<Vec<(bool, u16, u16)>>,
+    pub old_host_entities: Option<Vec<(bool, u16, u16)>>,
 }
 
 pub enum MenuItem {

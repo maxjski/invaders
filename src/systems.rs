@@ -63,6 +63,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             player_shoot: false,
             x: 55,
             host_entities: Option::None,
+            old_host_entities: Option::None,
         },
         main_menu: MainMenu {
             active_menu_item: MenuItem::HostGame,
@@ -143,6 +144,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             player_shoot: false,
             x: 55,
             host_entities: Option::None,
+            old_host_entities: Option::None,
         },
         main_menu: MainMenu {
             active_menu_item: MenuItem::HostGame,
@@ -261,15 +263,18 @@ pub fn process_multiplayer(
     }
 
     move_player(delta_time, &mut game_state.world);
-    // process_player_projectile(delta_time, game_state)?;
-    //
-    // process_enemies(delta_time, game_state);
-    // enemy_collision_detection(game_state);
-    //
-    // process_enemy_projectiles(delta_time, game_state)?;
-    // player_collision_detection(game_state);
 
-    entity_cleanup(&mut game_state.world)?;
+    if game_state.networking.host {
+        process_player_projectile(delta_time, game_state)?;
+
+        process_enemies(delta_time, game_state);
+        enemy_collision_detection(game_state);
+
+        process_enemy_projectiles(delta_time, game_state)?;
+        player_collision_detection(game_state);
+
+        entity_cleanup(&mut game_state.world)?;
+    }
 
     match game_state.networking.tx_writer {
         Some(ref tx_writer) => {

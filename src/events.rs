@@ -191,6 +191,8 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
                 false
             }
             NetPacket::GameStateUpdate { entities } => {
+                game_state.coplayer_handler.old_host_entities =
+                    game_state.coplayer_handler.host_entities.clone();
                 game_state.coplayer_handler.host_entities = Some(entities);
                 false
             }

@@ -72,7 +72,7 @@ impl Render {
                     renderable.erased = true;
                 }
             }
-        } else if let Some(ref entities) = game_state.coplayer_handler.host_entities {
+        } else if let Some(ref entities) = game_state.coplayer_handler.old_host_entities {
             for (enemy_ship, x, y) in entities {
                 if *enemy_ship {
                     self.draw_entity(
@@ -81,8 +81,42 @@ impl Render {
                         &Position { x: *x, y: *y },
                         &PrevPosition { x: *x, y: *y },
                         &Renderable {
-                            sprite_top: "⣆⡜⣛⢣⣠",
-                            sprite_bottom: "⣿⣿⣿⣿⣿",
+                            sprite_top: "     ",
+                            sprite_bottom: "     ",
+                            width: 5,
+                            destroy: false,
+                            erased: false,
+                        },
+                    )?;
+                } else {
+                    self.draw_entity(
+                        left,
+                        bottom,
+                        &Position { x: *x, y: *y },
+                        &PrevPosition { x: *x, y: *y },
+                        &Renderable {
+                            sprite_top: " ",
+                            sprite_bottom: " ",
+                            width: 1,
+                            destroy: false,
+                            erased: false,
+                        },
+                    )?;
+                }
+            }
+        }
+
+        if let Some(ref entities) = game_state.coplayer_handler.host_entities {
+            for (enemy_ship, x, y) in entities {
+                if *enemy_ship {
+                    self.draw_entity(
+                        left,
+                        bottom,
+                        &Position { x: *x, y: *y },
+                        &PrevPosition { x: *x, y: *y },
+                        &Renderable {
+                            sprite_top: "⢳⡴⠶⢦⡞",
+                            sprite_bottom: "⠞⠫⡪⠋⠱",
                             width: 5,
                             destroy: false,
                             erased: false,

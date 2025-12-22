@@ -1,10 +1,9 @@
 use std::error::Error;
-use std::io::ErrorKind;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::{Duration, Instant};
 
 use crossterm::{ExecutableCommand, cursor, event::PopKeyboardEnhancementFlags, terminal};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
@@ -102,26 +101,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                     let tx_game_events = tx_net.clone();
 
                                     tokio::spawn(async move {
-                                        let mut buffer = vec![0u8; 1024];
+                                        let mut reader = tokio::io::BufReader::new(reader);
+                                        let mut len_buf = [0u8; 4];
 
-                                        while reader.readable().await.is_ok() {
-                                            match reader.try_read(&mut buffer) {
-                                                Ok(0) => break,
-                                                Ok(n) => {
-                                                    if let Ok(packet) =
-                                                        bincode::deserialize::<NetPacket>(
-                                                            &buffer[..n],
-                                                        )
-                                                    {
-                                                        let _ = tx_game_events.send(
-                                                            GameEvent::PacketReceived(packet),
-                                                        );
-                                                    }
-                                                }
-                                                // Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
-                                                //     continue;
-                                                // }
-                                                Err(_) => continue,
+                                        loop {
+                                            // Read the 4-byte length prefix
+                                            if reader.read_exact(&mut len_buf).await.is_err() {
+                                                break;
+                                            }
+                                            let len = u32::from_be_bytes(len_buf) as usize;
+
+                                            // Read the message body
+                                            let mut msg_buf = vec![0u8; len];
+                                            if reader.read_exact(&mut msg_buf).await.is_err() {
+                                                break;
+                                            }
+
+                                            if let Ok(packet) =
+                                                bincode::deserialize::<NetPacket>(&msg_buf)
+                                            {
+                                                let _ = tx_game_events
+                                                    .send(GameEvent::PacketReceived(packet));
                                             }
                                         }
                                     });
@@ -133,7 +133,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                     tokio::spawn(async move {
                                         while let Some(packet) = rx_outbox.recv().await {
                                             let bytes = bincode::serialize(&packet).unwrap();
+                                            let len = (bytes.len() as u32).to_be_bytes();
 
+                                            let _ = writer.write_all(&len).await;
                                             let _ = writer.write_all(&bytes).await;
                                             let _ = writer.flush().await;
                                         }
@@ -155,23 +157,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 let tx_game_events = tx_net.clone();
 
                                 tokio::spawn(async move {
-                                    let mut buffer = vec![0u8; 1024];
+                                    let mut reader = tokio::io::BufReader::new(reader);
+                                    let mut len_buf = [0u8; 4];
 
-                                    while reader.readable().await.is_ok() {
-                                        match reader.try_read(&mut buffer) {
-                                            Ok(0) => break,
-                                            Ok(n) => {
-                                                if let Ok(packet) =
-                                                    bincode::deserialize::<NetPacket>(&buffer[..n])
-                                                {
-                                                    let _ = tx_game_events
-                                                        .send(GameEvent::PacketReceived(packet));
-                                                }
-                                            }
-                                            // Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
-                                            //     continue;
-                                            // }
-                                            Err(_) => continue,
+                                    loop {
+                                        // Read the 4-byte length prefix
+                                        if reader.read_exact(&mut len_buf).await.is_err() {
+                                            break;
+                                        }
+                                        let len = u32::from_be_bytes(len_buf) as usize;
+
+                                        // Read the message body
+                                        let mut msg_buf = vec![0u8; len];
+                                        if reader.read_exact(&mut msg_buf).await.is_err() {
+                                            break;
+                                        }
+
+                                        if let Ok(packet) =
+                                            bincode::deserialize::<NetPacket>(&msg_buf)
+                                        {
+                                            let _ = tx_game_events
+                                                .send(GameEvent::PacketReceived(packet));
                                         }
                                     }
                                 });
@@ -183,7 +189,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 tokio::spawn(async move {
                                     while let Some(packet) = rx_outbox.recv().await {
                                         let bytes = bincode::serialize(&packet).unwrap();
+                                        let len = (bytes.len() as u32).to_be_bytes();
 
+                                        let _ = writer.write_all(&len).await;
                                         let _ = writer.write_all(&bytes).await;
                                         let _ = writer.flush().await;
                                     }
