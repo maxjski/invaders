@@ -61,14 +61,48 @@ impl Render {
             return Ok(());
         }
 
-        for (_id, (pos, prev_pos, renderable)) in
-            game_state
-                .world
-                .query_mut::<(&Position, &PrevPosition, &mut Renderable)>()
-        {
-            self.draw_entity(left, bottom, pos, prev_pos, renderable)?;
-            if renderable.destroy {
-                renderable.erased = true;
+        if game_state.networking.host || !game_state.networking.stay_online {
+            for (_id, (pos, prev_pos, renderable)) in
+                game_state
+                    .world
+                    .query_mut::<(&Position, &PrevPosition, &mut Renderable)>()
+            {
+                self.draw_entity(left, bottom, pos, prev_pos, renderable)?;
+                if renderable.destroy {
+                    renderable.erased = true;
+                }
+            }
+        } else if let Some(ref entities) = game_state.coplayer_handler.host_entities {
+            for (enemy_ship, x, y) in entities {
+                if *enemy_ship {
+                    self.draw_entity(
+                        left,
+                        bottom,
+                        &Position { x: *x, y: *y },
+                        &PrevPosition { x: *x, y: *y },
+                        &Renderable {
+                            sprite_top: "⣆⡜⣛⢣⣠",
+                            sprite_bottom: "⣿⣿⣿⣿⣿",
+                            width: 5,
+                            destroy: false,
+                            erased: false,
+                        },
+                    )?;
+                } else {
+                    self.draw_entity(
+                        left,
+                        bottom,
+                        &Position { x: *x, y: *y },
+                        &PrevPosition { x: *x, y: *y },
+                        &Renderable {
+                            sprite_top: "⣿",
+                            sprite_bottom: "",
+                            width: 1,
+                            destroy: false,
+                            erased: false,
+                        },
+                    )?;
+                }
             }
         }
 

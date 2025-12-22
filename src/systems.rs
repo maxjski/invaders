@@ -259,7 +259,17 @@ pub fn process_multiplayer(
         prevpos.x = pos.x;
         pos.x = game_state.coplayer_handler.x;
     }
-    process_tick(delta_time, game_state)?;
+
+    move_player(delta_time, &mut game_state.world);
+    // process_player_projectile(delta_time, game_state)?;
+    //
+    // process_enemies(delta_time, game_state);
+    // enemy_collision_detection(game_state);
+    //
+    // process_enemy_projectiles(delta_time, game_state)?;
+    // player_collision_detection(game_state);
+
+    entity_cleanup(&mut game_state.world)?;
 
     match game_state.networking.tx_writer {
         Some(ref tx_writer) => {
