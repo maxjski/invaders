@@ -59,6 +59,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             move_player_left: false,
         },
         coplayer_handler: CoPlayerHandler {
+            exists: false,
             player_shoot: false,
             x: 0,
         },
@@ -92,10 +93,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
     Ok((game_state, renderer))
 }
 
-pub fn restart_world(
-    high_score: i32,
-    multiplayer: bool,
-) -> Result<(GameState, Render), Box<dyn Error>> {
+pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Error>> {
     let mut world = World::new();
 
     let player_entity = world.spawn((
@@ -116,25 +114,6 @@ pub fn restart_world(
         },
     ));
 
-    if multiplayer {
-        world.spawn((
-            CoPlayer,
-            Position { x: 55, y: 7 },
-            PrevPosition { x: 55, y: 7 },
-            Velocity {
-                speed: 60.0,
-                move_accumulator: 0.0,
-                direction: Direction::None,
-            },
-            Renderable {
-                sprite_top: "⣆⡜⣛⢣⣠",
-                sprite_bottom: "⣿⣿⣿⣿⣿",
-                width: 5,
-                destroy: false,
-                erased: false,
-            },
-        ));
-    }
     // Each frame is a list of lines
     let mut game_state = GameState {
         world,
@@ -159,8 +138,9 @@ pub fn restart_world(
             move_player_left: false,
         },
         coplayer_handler: CoPlayerHandler {
+            exists: false,
             player_shoot: false,
-            x: 0,
+            x: 55,
         },
         main_menu: MainMenu {
             active_menu_item: MenuItem::HostGame,
@@ -248,6 +228,35 @@ pub fn process_multiplayer(
     delta_time: Duration,
     game_state: &mut GameState,
 ) -> Result<(), Box<dyn Error>> {
+    if !game_state.coplayer_handler.exists {
+        game_state.world.spawn((
+            CoPlayer,
+            Position { x: 55, y: 7 },
+            PrevPosition { x: 55, y: 7 },
+            Velocity {
+                speed: 60.0,
+                move_accumulator: 0.0,
+                direction: Direction::None,
+            },
+            Renderable {
+                sprite_top: "⣆⡜⣛⢣⣠",
+                sprite_bottom: "⣿⣿⣿⣿⣿",
+                width: 5,
+                destroy: false,
+                erased: false,
+            },
+        ));
+        game_state.coplayer_handler.exists = true;
+    }
+
+    for (_, (pos, prevpos)) in game_state
+        .world
+        .query_mut::<(&mut Position, &mut PrevPosition)>()
+        .with::<&CoPlayer>()
+    {
+        prevpos.x = pos.x;
+        pos.x = game_state.coplayer_handler.x;
+    }
     process_tick(delta_time, game_state)?;
 
     match game_state.networking.tx_writer {
@@ -270,7 +279,6 @@ pub fn process_multiplayer(
             game_state.exit_to_menu();
         }
     }
-
     if let Some((_, mut pos)) = game_state
         .world
         .query::<&Position>()

@@ -38,6 +38,7 @@ pub struct PlayerInputHandler {
 }
 
 pub struct CoPlayerHandler {
+    pub exists: bool,
     pub x: u16,
     pub player_shoot: bool,
 }

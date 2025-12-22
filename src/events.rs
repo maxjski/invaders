@@ -58,6 +58,13 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
                     }
                     false
                 }
+                Screen::Hosting => {
+                    if game_state.networking.tx_writer.is_some() {
+                        game_state.main_menu.screen = Screen::Game;
+                        game_state.request_clear_render = true;
+                    }
+                    false
+                }
                 Screen::Game => {
                     game_state.player_input_handler.player_shoot = true;
                     false
@@ -175,6 +182,10 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
         }
         GameEvent::PacketReceived(packet) => match packet {
             NetPacket::PlayerInput { x, shoot } => {
+                if let Screen::Joining = game_state.main_menu.screen {
+                    game_state.main_menu.screen = Screen::Game;
+                    game_state.request_clear_render = true;
+                }
                 game_state.coplayer_handler.x = x as u16;
                 game_state.coplayer_handler.player_shoot = shoot;
                 false

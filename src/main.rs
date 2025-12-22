@@ -206,7 +206,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
 
             if game_state.restart_notifier {
-                (game_state, renderer) = restart_world(game_state.high_score, false)?;
+                (game_state, renderer) = restart_world(game_state.high_score)?;
                 continue;
             }
 
@@ -252,13 +252,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // Clamp dt to reduce perceived speed changes when we fall behind
             dt = dt.min(max_dt);
 
-            match game_state.networking.tx_writer {
-                Option::None => {
-                    process_tick(dt.max(fixed_dt).min(max_dt), &mut game_state)?;
-                }
-                Some(_) => {
-                    process_multiplayer(dt.max(fixed_dt).min(max_dt), &mut game_state)?;
-                }
+            if game_state.networking.tx_writer.is_some() {
+                process_multiplayer(dt.max(fixed_dt).min(max_dt), &mut game_state)?;
+            } else {
+                process_tick(dt.max(fixed_dt).min(max_dt), &mut game_state)?;
             }
 
             match renderer.render(&mut game_state) {
