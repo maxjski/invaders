@@ -276,6 +276,24 @@ pub fn process_multiplayer(
                     shoot: false,
                 })?;
             }
+
+            if game_state.networking.host {
+                let mut entities: Vec<(bool, u16, u16)> = Vec::new();
+
+                for (_, pos) in game_state.world.query_mut::<&Position>().with::<&Enemy>() {
+                    entities.push((true, pos.x, pos.y));
+                }
+
+                for (_, pos) in game_state
+                    .world
+                    .query_mut::<&Position>()
+                    .with::<&EnemyProjectile>()
+                {
+                    entities.push((false, pos.x, pos.y));
+                }
+
+                tx_writer.send(NetPacket::GameStateUpdate { entities })?;
+            }
         }
         _ => {
             game_state.exit_to_menu();
