@@ -1,7 +1,7 @@
 use crate::{
-    Direction, Enemy, EnemyProjectile, GameNetworking, GameState, MainMenu, MenuItem, Player,
-    PlayerInputHandler, PlayerProjectile, Position, PrevPosition, ProjectileSpawner, Render,
-    Renderable, Screen, Velocity,
+    Direction, Enemy, EnemyProjectile, GameNetworking, GameState, MainMenu, MenuItem, NetPacket,
+    Player, PlayerInputHandler, PlayerProjectile, Position, PrevPosition, ProjectileSpawner,
+    Render, Renderable, Screen, Velocity,
 };
 use crossterm::terminal;
 use hecs::Entity;
@@ -209,6 +209,36 @@ pub fn process_tick(
     player_collision_detection(game_state);
 
     entity_cleanup(&mut game_state.world)?;
+
+    Ok(())
+}
+
+pub fn process_multiplayer(
+    delta_time: Duration,
+    game_state: &mut GameState,
+) -> Result<(), Box<dyn Error>> {
+    process_tick(delta_time, game_state)?;
+
+    match game_state.networking.tx_writer {
+        Some(ref tx_writer) => {
+            if let Some((_, pos)) = game_state
+                .world
+                .query::<&Position>()
+                .with::<&Player>()
+                .iter()
+                .map(|(id, pos)| (id, *pos))
+                .next()
+            {
+                tx_writer.send(NetPacket::PlayerInput {
+                    x: pos.x as f32,
+                    shoot: false,
+                })?;
+            }
+        }
+        _ => {
+            game_state.exit_to_menu();
+        }
+    }
 
     Ok(())
 }

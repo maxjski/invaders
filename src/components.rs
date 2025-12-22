@@ -38,6 +38,8 @@ pub struct ProjectileSpawner {
 
 pub struct Player;
 
+pub struct CoPlayer;
+
 pub struct PlayerProjectile;
 
 pub struct Enemy;
