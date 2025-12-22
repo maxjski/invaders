@@ -292,6 +292,14 @@ pub fn process_multiplayer(
                     entities.push((false, pos.x, pos.y));
                 }
 
+                for (_, pos) in game_state
+                    .world
+                    .query_mut::<&Position>()
+                    .with::<&PlayerProjectile>()
+                {
+                    entities.push((false, pos.x, pos.y));
+                }
+
                 tx_writer.send(NetPacket::GameStateUpdate { entities })?;
             }
         }
