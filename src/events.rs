@@ -190,7 +190,10 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
                 game_state.coplayer_handler.player_shoot = shoot;
                 false
             }
-            NetPacket::GameStateUpdate { entities } => false,
+            NetPacket::GameStateUpdate { entities } => {
+                game_state.coplayer_handler.host_entities = Some(entities);
+                false
+            }
         },
         GameEvent::Quit => false,
     }

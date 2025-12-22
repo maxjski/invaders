@@ -49,5 +49,5 @@ pub struct EnemyProjectile;
 #[derive(Serialize, Deserialize, Debug)]
 pub enum NetPacket {
     PlayerInput { x: f32, shoot: bool },
-    GameStateUpdate { entities: Vec<(f32, f32)> },
+    GameStateUpdate { entities: Vec<(bool, u16, u16)> },
 }

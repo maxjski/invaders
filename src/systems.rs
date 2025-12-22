@@ -62,6 +62,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             exists: false,
             player_shoot: false,
             x: 55,
+            host_entities: Option::None,
         },
         main_menu: MainMenu {
             active_menu_item: MenuItem::HostGame,
@@ -141,6 +142,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
             exists: false,
             player_shoot: false,
             x: 55,
+            host_entities: Option::None,
         },
         main_menu: MainMenu {
             active_menu_item: MenuItem::HostGame,
