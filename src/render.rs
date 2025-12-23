@@ -73,13 +73,13 @@ impl Render {
                 }
             }
         } else if let Some(ref entities) = game_state.coplayer_handler.old_host_entities {
-            for (enemy_ship, x, y) in entities {
-                if *enemy_ship {
+            for (code, x, y) in entities.clone() {
+                if code == 0 {
                     self.draw_entity(
                         left,
                         bottom,
-                        &Position { x: *x, y: *y },
-                        &PrevPosition { x: *x, y: *y },
+                        &Position { x, y },
+                        &PrevPosition { x, y },
                         &Renderable {
                             sprite_top: "     ",
                             sprite_bottom: "     ",
@@ -88,16 +88,30 @@ impl Render {
                             erased: false,
                         },
                     )?;
-                } else {
+                } else if code == 1 {
                     self.draw_entity(
                         left,
                         bottom,
-                        &Position { x: *x, y: *y },
-                        &PrevPosition { x: *x, y: *y },
+                        &Position { x, y },
+                        &PrevPosition { x, y },
                         &Renderable {
                             sprite_top: " ",
                             sprite_bottom: " ",
                             width: 1,
+                            destroy: false,
+                            erased: false,
+                        },
+                    )?;
+                } else if code == 2 {
+                    self.draw_entity(
+                        left,
+                        bottom,
+                        &Position { x, y },
+                        &PrevPosition { x, y },
+                        &Renderable {
+                            sprite_top: "     ",
+                            sprite_bottom: "     ",
+                            width: 5,
                             destroy: false,
                             erased: false,
                         },
@@ -107,13 +121,13 @@ impl Render {
         }
 
         if let Some(ref entities) = game_state.coplayer_handler.host_entities {
-            for (enemy_ship, x, y) in entities {
-                if *enemy_ship {
+            for (code, x, y) in entities.clone() {
+                if code == 0 {
                     self.draw_entity(
                         left,
                         bottom,
-                        &Position { x: *x, y: *y },
-                        &PrevPosition { x: *x, y: *y },
+                        &Position { x, y },
+                        &PrevPosition { x, y },
                         &Renderable {
                             sprite_top: "⢳⡴⠶⢦⡞",
                             sprite_bottom: "⠞⠫⡪⠋⠱",
@@ -122,16 +136,30 @@ impl Render {
                             erased: false,
                         },
                     )?;
-                } else {
+                } else if code == 1 {
                     self.draw_entity(
                         left,
                         bottom,
-                        &Position { x: *x, y: *y },
-                        &PrevPosition { x: *x, y: *y },
+                        &Position { x, y },
+                        &PrevPosition { x, y },
                         &Renderable {
                             sprite_top: "⣿",
-                            sprite_bottom: "",
+                            sprite_bottom: " ",
                             width: 1,
+                            destroy: false,
+                            erased: false,
+                        },
+                    )?;
+                } else if code == 2 {
+                    self.draw_entity(
+                        left,
+                        bottom,
+                        &Position { x, y },
+                        &PrevPosition { x, y },
+                        &Renderable {
+                            sprite_top: "⣆⡜⣛⢣⣠",
+                            sprite_bottom: "⣿⣿⣿⣿⣿",
+                            width: 5,
                             destroy: false,
                             erased: false,
                         },

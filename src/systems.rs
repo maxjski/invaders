@@ -293,10 +293,10 @@ pub fn process_multiplayer(
             }
 
             if game_state.networking.host {
-                let mut entities: Vec<(bool, u16, u16)> = Vec::new();
+                let mut entities: Vec<(u16, u16, u16)> = Vec::new();
 
                 for (_, pos) in game_state.world.query_mut::<&Position>().with::<&Enemy>() {
-                    entities.push((true, pos.x, pos.y));
+                    entities.push((0, pos.x, pos.y));
                 }
 
                 for (_, pos) in game_state
@@ -304,7 +304,7 @@ pub fn process_multiplayer(
                     .query_mut::<&Position>()
                     .with::<&EnemyProjectile>()
                 {
-                    entities.push((false, pos.x, pos.y));
+                    entities.push((1, pos.x, pos.y));
                 }
 
                 for (_, pos) in game_state
@@ -312,7 +312,18 @@ pub fn process_multiplayer(
                     .query_mut::<&Position>()
                     .with::<&PlayerProjectile>()
                 {
-                    entities.push((false, pos.x, pos.y));
+                    entities.push((1, pos.x, pos.y));
+                }
+
+                for (_, pos) in game_state.world.query_mut::<&Position>().with::<&Player>() {
+                    entities.push((2, pos.x, pos.y));
+                }
+                for (_, pos) in game_state
+                    .world
+                    .query_mut::<&Position>()
+                    .with::<&CoPlayer>()
+                {
+                    entities.push((2, pos.x, pos.y));
                 }
 
                 tx_writer.send(NetPacket::GameStateUpdate { entities })?;
