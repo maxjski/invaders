@@ -392,9 +392,11 @@ fn spawn_player_projectile(game_state: &mut GameState) {
 
 fn spawn_coplayer_projectile(game_state: &mut GameState) {
     if game_state.coplayer_handler.projectile_exists || !game_state.coplayer_handler.player_shoot {
+        game_state.coplayer_handler.player_shoot = false;
         return;
     } else {
         game_state.coplayer_handler.projectile_exists = true;
+        game_state.coplayer_handler.player_shoot = false;
     }
 
     let mut pos: Option<u16> = Option::None;

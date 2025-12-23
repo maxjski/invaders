@@ -67,7 +67,9 @@ pub fn handle_event(event: GameEvent, renderer: &mut Render, game_state: &mut Ga
                 }
                 Screen::Game => {
                     game_state.player_input_handler.player_shoot = true;
-                    game_state.coplayer_handler.player_shoot = true;
+                    if !game_state.networking.host {
+                        game_state.coplayer_handler.player_shoot = true;
+                    }
                     false
                 }
                 _ => false,
