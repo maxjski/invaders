@@ -41,6 +41,7 @@ pub struct CoPlayerHandler {
     pub exists: bool,
     pub x: u16,
     pub player_shoot: bool,
+    pub projectile_exists: bool,
 
     pub host_entities: Option<Vec<(u16, u16, u16)>>,
     pub old_host_entities: Option<Vec<(u16, u16, u16)>>,

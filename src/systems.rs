@@ -1,8 +1,8 @@
 use crate::state::CoPlayerHandler;
 use crate::{
-    CoPlayer, Direction, Enemy, EnemyProjectile, GameNetworking, GameState, MainMenu, MenuItem,
-    NetPacket, Player, PlayerInputHandler, PlayerProjectile, Position, PrevPosition,
-    ProjectileSpawner, Render, Renderable, Screen, Velocity,
+    CoPlayer, CoPlayerProjectile, Direction, Enemy, EnemyProjectile, GameNetworking, GameState,
+    MainMenu, MenuItem, NetPacket, Player, PlayerInputHandler, PlayerProjectile, Position,
+    PrevPosition, ProjectileSpawner, Render, Renderable, Screen, Velocity,
 };
 use crossterm::terminal;
 use hecs::Entity;
@@ -62,6 +62,7 @@ pub fn create_world() -> Result<(GameState, Render), Box<dyn Error>> {
             exists: false,
             player_shoot: false,
             x: 55,
+            projectile_exists: false,
             host_entities: Option::None,
             old_host_entities: Option::None,
         },
@@ -142,6 +143,7 @@ pub fn restart_world(high_score: i32) -> Result<(GameState, Render), Box<dyn Err
         coplayer_handler: CoPlayerHandler {
             exists: false,
             player_shoot: false,
+            projectile_exists: false,
             x: 55,
             host_entities: Option::None,
             old_host_entities: Option::None,
@@ -266,6 +268,7 @@ pub fn process_multiplayer(
 
     if game_state.networking.host {
         process_player_projectile(delta_time, game_state)?;
+        process_coplayer_projectile(delta_time, game_state)?;
 
         process_enemies(delta_time, game_state);
         enemy_collision_detection(game_state);
@@ -275,6 +278,9 @@ pub fn process_multiplayer(
 
         entity_cleanup(&mut game_state.world)?;
     }
+
+    let shooting = game_state.coplayer_handler.player_shoot;
+    game_state.coplayer_handler.player_shoot = false;
 
     match game_state.networking.tx_writer {
         Some(ref tx_writer) => {
@@ -288,7 +294,7 @@ pub fn process_multiplayer(
             {
                 tx_writer.send(NetPacket::PlayerInput {
                     x: pos.x as f32,
-                    shoot: false,
+                    shoot: shooting,
                 })?;
             }
 
@@ -382,6 +388,99 @@ fn spawn_player_projectile(game_state: &mut GameState) {
             },
         ));
     }
+}
+
+fn spawn_coplayer_projectile(game_state: &mut GameState) {
+    if game_state.coplayer_handler.projectile_exists || !game_state.coplayer_handler.player_shoot {
+        return;
+    } else {
+        game_state.coplayer_handler.projectile_exists = true;
+    }
+
+    let mut pos: Option<u16> = Option::None;
+    for (_, position) in game_state
+        .world
+        .query_mut::<&Position>()
+        .with::<&CoPlayer>()
+    {
+        pos = Option::Some(position.x);
+    }
+
+    if let Some(pos) = pos {
+        game_state.world.spawn((
+            PlayerProjectile,
+            CoPlayerProjectile,
+            // We add 2 to pos, as width of player is 5 and we want projectiles to spawn in
+            // the middle
+            Position { x: pos + 2, y: 8 },
+            PrevPosition { x: pos + 2, y: 8 },
+            Velocity {
+                speed: 60.0,
+                move_accumulator: 0.0,
+                direction: Direction::None,
+            },
+            Renderable {
+                sprite_top: "⣿",
+                sprite_bottom: "",
+                width: 1,
+                destroy: false,
+                erased: false,
+            },
+        ));
+    }
+}
+
+fn process_coplayer_projectile(
+    delta_time: Duration,
+    game_state: &mut GameState,
+) -> Result<(), Box<dyn Error>> {
+    spawn_coplayer_projectile(game_state);
+
+    let mut player_projectile: Option<Entity> = Option::None;
+    for (id, (pos, prev_pos, vel, renderable)) in game_state
+        .world
+        .query_mut::<(
+            &mut Position,
+            &mut PrevPosition,
+            &mut Velocity,
+            &mut Renderable,
+        )>()
+        .with::<&PlayerProjectile>()
+    {
+        // projectile sprite was destroyed by renderer
+        if renderable.erased {
+            player_projectile = Option::Some(id);
+        }
+
+        vel.move_accumulator += vel.speed * delta_time.as_secs_f32();
+
+        if vel.move_accumulator >= 1.0 || vel.move_accumulator <= -1.0 {
+            // Move in whole-cell steps, keep fractional remainder to avoid drift and asymmetry
+            let steps = vel.move_accumulator.trunc();
+            let new_pos = pos.y as i32 + steps as i32;
+
+            let old_pos = pos.y;
+            prev_pos.y = old_pos;
+
+            if new_pos < 2 {
+                pos.y = 2;
+            } else if new_pos > 39 {
+                renderable.destroy = true;
+            } else {
+                pos.y = new_pos as u16;
+            }
+
+            vel.move_accumulator -= steps;
+        }
+    }
+
+    // If player projectile is assigned, we need to destory it
+    if let Some(player_projectile) = player_projectile {
+        game_state.world.despawn(player_projectile)?;
+        game_state.player_projectile_exists = false;
+    }
+
+    Ok(())
 }
 
 fn process_player_projectile(

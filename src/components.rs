@@ -42,6 +42,8 @@ pub struct CoPlayer;
 
 pub struct PlayerProjectile;
 
+pub struct CoPlayerProjectile;
+
 pub struct Enemy;
 
 pub struct EnemyProjectile;
